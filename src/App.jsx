@@ -14,6 +14,7 @@ import HarvestForm from './components/HarvestForm';
 import CropDetails from './components/CropDetails';
 import Analytics from './components/Analytics';
 import AdminPortal from './components/AdminPortal';
+import LanguageSelector from './components/LanguageSelector';
 
 // Services
 import { initGoogleOAuth, fetchGoogleUserInfo, getStoredGoogleToken, clearAuthSession, requestGoogleToken, registerPasswordForGoogleUser } from './services/auth';
@@ -27,6 +28,7 @@ export default function App() {
   const [fileId, setFileId] = useState(null);
   
   // App states
+  const [isLanguageConfirmed, setIsLanguageConfirmed] = useState(!!sessionStorage.getItem('language_confirmed'));
   const [data, setData] = useState({ crops: [], expenses: [], harvests: [] });
   const [syncStatus, setSyncStatus] = useState('local'); // 'local', 'synced', 'syncing', 'unsaved', 'error'
   const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard', 'crop_form', 'expense_form', 'harvest_form', 'crop_details', 'analytics'
@@ -588,6 +590,11 @@ export default function App() {
       setIsSubmittingFeedback(false);
     }
   };
+
+  // If language is not selected yet for the session, show Language Selector overlay
+  if (!isLanguageConfirmed) {
+    return <LanguageSelector onConfirm={() => setIsLanguageConfirmed(true)} />;
+  }
 
   // If user is not authenticated, show login page
   if (!user) {
