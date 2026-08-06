@@ -81,6 +81,15 @@ export default function AdminPortal({ googleToken, onBack }) {
         )}
       </div>
 
+      {data.isMock && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-xs text-amber-900 space-y-1">
+          <p className="font-bold flex items-center gap-1">⚠️ Running in Simulated Sandbox Mode</p>
+          <p className="leading-relaxed font-medium">
+            To view the real active emails of registered farmers and feedback rows, please deploy your Google Apps Script Web App (as detailed in the <code className="bg-amber-100 px-1 py-0.5 rounded text-[11px]">GOOGLE_APPS_SCRIPT_GUIDE.md</code> file in your repository) and add the <code className="bg-amber-100 px-1 py-0.5 rounded text-[11px]">VITE_ADMIN_API_URL</code> environment variable on your Vercel Dashboard, then redeploy the site.
+          </p>
+        </div>
+      )}
+
       {error ? (
         <div className="bg-rose-50 border border-rose-200 rounded-xl p-4 text-xs text-rose-800 font-medium">
           ⚠️ {error}
