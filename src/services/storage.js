@@ -10,6 +10,26 @@ const INITIAL_DATA = {
 const getLocalKey = (username) => `farm_data_local_${username}`;
 const getGoogleCacheKey = (email) => `farm_data_google_${email}`;
 
+function mergeData(local, drive) {
+  const merged = { crops: [], expenses: [], harvests: [] };
+  
+  const mergeArrays = (arr1, arr2) => {
+    const map = new Map();
+    (arr1 || []).forEach(item => {
+      if (item && item.id) map.set(item.id, item);
+    });
+    (arr2 || []).forEach(item => {
+      if (item && item.id) map.set(item.id, item);
+    });
+    return Array.from(map.values());
+  };
+
+  merged.crops = mergeArrays(local.crops, drive.crops);
+  merged.expenses = mergeArrays(local.expenses, drive.expenses);
+  merged.harvests = mergeArrays(local.harvests, drive.harvests);
+  return merged;
+}
+
 // Load data based on user type
 export async function loadUserData(user, googleToken = null) {
   if (!user) return INITIAL_DATA;
@@ -96,8 +116,11 @@ export async function loadUserData(user, googleToken = null) {
         // Save content
         await uploadToGoogleDrive(fileId, driveData, googleToken);
       } else if (driveData) {
-        // We downloaded fresh drive data, cache it locally
-        localStorage.setItem(getGoogleCacheKey(user.email), JSON.stringify(driveData));
+        // Merge downloaded data with unsynced local data to prevent data loss
+        const mergedData = mergeData(data, driveData);
+        localStorage.setItem(getGoogleCacheKey(user.email), JSON.stringify(mergedData));
+        await uploadToGoogleDrive(fileId, mergedData, googleToken);
+        driveData = mergedData;
       }
 
       localStorage.setItem('google_drive_file_id', fileId);

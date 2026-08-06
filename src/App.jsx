@@ -441,6 +441,8 @@ export default function App() {
             setSelectedCropId={setSelectedCropId}
             syncStatus={syncStatus}
             user={user}
+            onTriggerInstall={handleTriggerInstall}
+            deferredPrompt={deferredPrompt}
           />
         );
       case 'crop_form':
