@@ -33,36 +33,39 @@ let currentToken = null;
 let tokenExpiry = null;
 
 export function initGoogleOAuth(onTokenReceived, onError) {
-  if (typeof window === 'undefined' || !window.google) {
-    console.warn("Google client script not loaded yet.");
-    return;
-  }
+  const checkAndInit = () => {
+    if (typeof window !== 'undefined' && window.google && window.google.accounts && window.google.accounts.oauth2) {
+      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "336829707172-mockclientid.apps.googleusercontent.com";
 
-  // Use the env variable or a generic development client ID
-  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "336829707172-mockclientid.apps.googleusercontent.com";
-
-  try {
-    tokenClient = window.google.accounts.oauth2.initTokenClient({
-      client_id: clientId,
-      scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
-      callback: (tokenResponse) => {
-        if (tokenResponse.access_token) {
-          currentToken = tokenResponse.access_token;
-          tokenExpiry = Date.now() + (parseInt(tokenResponse.expires_in, 10) * 1000);
-          localStorage.setItem('google_access_token', currentToken);
-          localStorage.setItem('google_token_expiry', tokenExpiry.toString());
-          onTokenReceived(tokenResponse);
-        } else {
-          if (onError) onError(tokenResponse);
-        }
-      },
-      error_callback: (err) => {
-        if (onError) onError(err);
+      try {
+        tokenClient = window.google.accounts.oauth2.initTokenClient({
+          client_id: clientId,
+          scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile',
+          callback: (tokenResponse) => {
+            if (tokenResponse.access_token) {
+              currentToken = tokenResponse.access_token;
+              tokenExpiry = Date.now() + (parseInt(tokenResponse.expires_in, 10) * 1000);
+              localStorage.setItem('google_access_token', currentToken);
+              localStorage.setItem('google_token_expiry', tokenExpiry.toString());
+              onTokenReceived(tokenResponse);
+            } else {
+              if (onError) onError(tokenResponse);
+            }
+          },
+          error_callback: (err) => {
+            if (onError) onError(err);
+          }
+        });
+        console.log("Google Identity Services client initialized successfully.");
+      } catch (err) {
+        console.error("Failed to initialize Google OAuth client:", err);
       }
-    });
-  } catch (err) {
-    console.error("Failed to initialize Google OAuth client:", err);
-  }
+    } else {
+      setTimeout(checkAndInit, 100);
+    }
+  };
+
+  checkAndInit();
 }
 
 export function requestGoogleToken(forceConsent = false) {
