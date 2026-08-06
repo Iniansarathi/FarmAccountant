@@ -720,6 +720,25 @@ export default function ExpenseForm({ crops, defaultCropId, onSave, onCancel, ed
 
           </div>
 
+          {/* Total Cost Display / Input */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+              {t('expense_form.total_cost')} *
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-3 text-slate-500 font-bold text-sm">₹</span>
+              <input
+                type="number"
+                required
+                min="1"
+                value={cost}
+                onChange={(e) => setCost(e.target.value)}
+                placeholder="e.g. 1500"
+                className="w-full pl-8 pr-3 py-3 rounded-xl border border-slate-200 font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm shadow-sm transition-all"
+              />
+            </div>
+          </div>
+
           {/* Sowing Date/Expense Date */}
           <div>
             <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
@@ -749,25 +768,6 @@ export default function ExpenseForm({ crops, defaultCropId, onSave, onCancel, ed
               rows={2}
               className="w-full px-3 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm shadow-sm transition-all"
             />
-          </div>
-
-          {/* Total Cost Display / Input */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
-              {t('expense_form.total_cost')} *
-            </label>
-            <div className="relative">
-              <span className="absolute left-3 top-3 text-slate-500 font-bold text-sm">₹</span>
-              <input
-                type="number"
-                required
-                min="1"
-                value={cost}
-                onChange={(e) => setCost(e.target.value)}
-                placeholder="e.g. 1500"
-                className="w-full pl-8 pr-3 py-3 rounded-xl border border-slate-200 font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-sm shadow-sm transition-all"
-              />
-            </div>
           </div>
 
           {/* Validation Warning Callout */}
