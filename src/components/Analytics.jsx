@@ -110,14 +110,14 @@ export default function Analytics({ data }) {
         ) : (
           <div className="flex flex-col sm:flex-row items-center justify-around gap-6">
             {/* Chart */}
-            <div className="w-48 h-48">
+            <div className="w-48 h-48 relative flex items-center justify-center">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={pieData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={50}
+                    innerRadius={55}
                     outerRadius={75}
                     paddingAngle={3}
                     dataKey="value"
@@ -129,6 +129,14 @@ export default function Analytics({ data }) {
                   <Tooltip formatter={(value) => formatCurrency(value)} />
                 </PieChart>
               </ResponsiveContainer>
+
+              {/* Total Spent Center Badge */}
+              <div className="absolute flex flex-col items-center justify-center text-center pointer-events-none">
+                <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider leading-none">Total</span>
+                <span className="text-xs font-extrabold text-slate-800 font-display mt-1 leading-none">
+                  {formatCurrency(pieData.reduce((s, i) => s + i.value, 0))}
+                </span>
+              </div>
             </div>
 
             {/* Legends & Details */}

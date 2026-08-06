@@ -36,7 +36,8 @@ export async function loadUserData(user, googleToken = null) {
       const searchUrl = `https://www.googleapis.com/drive/v3/files?q=${query}&spaces=drive`;
       
       const searchRes = await fetch(searchUrl, {
-        headers: { Authorization: `Bearer ${googleToken}` }
+        headers: { Authorization: `Bearer ${googleToken}` },
+        cache: 'no-store'
       });
 
       if (!searchRes.ok) {
@@ -56,7 +57,8 @@ export async function loadUserData(user, googleToken = null) {
         // Download file content
         const downloadUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
         const downloadRes = await fetch(downloadUrl, {
-          headers: { Authorization: `Bearer ${googleToken}` }
+          headers: { Authorization: `Bearer ${googleToken}` },
+          cache: 'no-store'
         });
 
         if (downloadRes.ok) {
