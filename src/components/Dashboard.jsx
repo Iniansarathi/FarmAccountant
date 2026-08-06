@@ -9,7 +9,8 @@ export default function Dashboard({
   syncStatus,
   user,
   onTriggerInstall,
-  deferredPrompt
+  deferredPrompt,
+  onShowIOSInstallGuide
 }) {
   const { t } = useTranslation();
 
@@ -28,6 +29,23 @@ export default function Dashboard({
   
   const netProfit = totalRevenue - concludedCropsInvestment;
 
+  const isStandalone = typeof window !== 'undefined' && (
+    window.matchMedia('(display-mode: standalone)').matches || 
+    window.navigator.standalone
+  );
+
+  const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+  const handleInstallClick = () => {
+    if (isIOS) {
+      onShowIOSInstallGuide();
+    } else if (deferredPrompt) {
+      onTriggerInstall();
+    } else {
+      alert("To install FarmAccountant: \n\n• On Android/Chrome: Tap the 3 dots in the top-right corner of Chrome and select 'Add to Home screen' or 'Install app'.\n• On Desktop Chrome/Edge: Click the install icon in the address bar at the top-right.");
+    }
+  };
+
   // Calculate expenses per active crop for dashboard list
   const getCropExpenses = (cropId) => {
     return data.expenses
@@ -44,7 +62,7 @@ export default function Dashboard({
     <div className="flex-1 px-4 py-6 sm:px-6 space-y-6 max-w-4xl mx-auto w-full">
       
       {/* PWA Install Callout Banner */}
-      {!window.matchMedia('(display-mode: standalone)').matches && deferredPrompt && (
+      {!isStandalone && (
         <div className="bg-emerald-50 border border-emerald-250 rounded-2xl p-5 text-sm text-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm border-emerald-150 animate-scale-in text-left">
           <div className="flex items-start gap-3">
             <span className="text-2xl shrink-0">📲</span>
@@ -56,7 +74,7 @@ export default function Dashboard({
             </div>
           </div>
           <button
-            onClick={onTriggerInstall}
+            onClick={handleInstallClick}
             className="shrink-0 px-4 py-2 bg-[#0C9D61] hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer hover-scale hover-scale-active text-center"
           >
             Install App

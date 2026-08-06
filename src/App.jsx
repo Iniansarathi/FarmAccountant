@@ -443,6 +443,7 @@ export default function App() {
             user={user}
             onTriggerInstall={handleTriggerInstall}
             deferredPrompt={deferredPrompt}
+            onShowIOSInstallGuide={() => setShowIOSInstallGuide(true)}
           />
         );
       case 'crop_form':
