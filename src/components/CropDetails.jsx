@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Trash2, Calendar, MapPin, Layers, Receipt, Plus, Grape, Pencil } from 'lucide-react';
+import { ArrowLeft, Trash2, Calendar, MapPin, Layers, Receipt, Plus, Grape, Pencil, CalendarCheck } from 'lucide-react';
 
 export default function CropDetails({ 
   cropId, 
@@ -8,6 +8,8 @@ export default function CropDetails({
   onBack, 
   onDeleteCrop, 
   onDeleteExpense, 
+  onDeleteHarvest,
+  onConcludeCrop,
   onNavigate, 
   setSelectedCropId,
   onEditCrop,
@@ -15,6 +17,10 @@ export default function CropDetails({
   onEditHarvest
 }) {
   const { t } = useTranslation();
+
+  const [isConcludeModalOpen, setIsConcludeModalOpen] = useState(false);
+  const [conclusionDate, setConclusionDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedYear, setSelectedYear] = useState('all');
 
   const crop = data.crops.find(c => c.id === cropId);
   if (!crop) {
@@ -28,12 +34,40 @@ export default function CropDetails({
     );
   }
 
-  const cropExpenses = data.expenses.filter(e => e.cropId === cropId) || [];
-  const cropHarvest = data.harvests.find(h => h.cropId === cropId);
+  const rawExpenses = data.expenses.filter(e => e.cropId === cropId) || [];
+  const rawHarvests = data.harvests.filter(h => h.cropId === cropId) || [];
+
+  const isLongTerm = crop.harvestType === 'longterm';
+
+  const cropExpenses = isLongTerm && selectedYear !== 'all'
+    ? rawExpenses.filter(e => e.date.startsWith(selectedYear))
+    : rawExpenses;
+
+  const cropHarvests = isLongTerm && selectedYear !== 'all'
+    ? rawHarvests.filter(h => h.date.startsWith(selectedYear))
+    : rawHarvests;
 
   const totalExpense = cropExpenses.reduce((sum, e) => sum + (Number(e.cost) || 0), 0);
-  const revenue = cropHarvest ? Number(cropHarvest.revenue) || 0 : 0;
+  const revenue = cropHarvests.reduce((sum, h) => sum + (Number(h.revenue) || 0), 0);
   const profit = revenue - totalExpense;
+
+  const getFilterYears = () => {
+    const years = new Set();
+    rawExpenses.forEach(e => {
+      if (e.date) {
+        const y = e.date.substring(0, 4);
+        if (y.match(/^\d{4}$/)) years.add(y);
+      }
+    });
+    rawHarvests.forEach(h => {
+      if (h.date) {
+        const y = h.date.substring(0, 4);
+        if (y.match(/^\d{4}$/)) years.add(y);
+      }
+    });
+    return Array.from(years).sort().reverse();
+  };
+  const filterYears = getFilterYears();
 
   const formatCurrency = (val) => {
     return `${t('dashboard.currency_symbol')}${Number(val).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
@@ -147,12 +181,15 @@ export default function CropDetails({
       <div className="glass-card rounded-2xl p-5 border border-slate-200 shadow-sm space-y-4 text-left">
         <div className="flex justify-between items-start">
           <div>
-            <span className={`inline-block px-2.5 py-0.5 text-xs font-bold rounded-full border mb-2 ${
+            <span className={`inline-block px-2.5 py-0.5 text-xs font-bold rounded-full border mb-2 mr-1.5 ${
               crop.status === 'active' 
                 ? 'bg-emerald-50 text-emerald-700 border-emerald-250' 
                 : 'bg-slate-100 text-slate-600 border-slate-250'
             }`}>
               {crop.status === 'active' ? t('dashboard.status_active') : t('dashboard.status_harvested')}
+            </span>
+            <span className="inline-block px-2.5 py-0.5 text-xs font-bold rounded-full border bg-slate-50 text-slate-655 border-slate-200 mb-2">
+              {crop.harvestType === 'single' ? 'One-Time Harvest' : crop.harvestType === 'multiple' ? 'Multiple Harvests' : 'Long-Term Continuous'}
             </span>
             <div className="flex items-center gap-2">
               <h2 className="font-display font-extrabold text-2xl text-slate-800 tracking-tight m-0">
@@ -206,81 +243,131 @@ export default function CropDetails({
           <p className="font-display font-bold text-slate-700 mt-0.5">{formatCurrency(revenue)}</p>
         </div>
         <div className={`glass-card rounded-xl p-3 text-center border shadow-sm ${
-          !cropHarvest ? 'border-slate-100 opacity-60' : profit >= 0 ? 'border-emerald-200 bg-emerald-50/20' : 'border-rose-200 bg-rose-50/20'
+          cropHarvests.length === 0 ? 'border-slate-100 opacity-60' : profit >= 0 ? 'border-emerald-200 bg-emerald-50/20' : 'border-rose-200 bg-rose-50/20'
         }`}>
           <p className="text-[10px] text-slate-400 uppercase font-bold">
             {profit >= 0 ? t('dashboard.net_profit') : t('dashboard.net_loss')}
           </p>
           <p className={`font-display font-bold mt-0.5 ${
-            !cropHarvest ? 'text-slate-500' : profit >= 0 ? 'text-emerald-600' : 'text-rose-600'
+            cropHarvests.length === 0 ? 'text-slate-500' : profit >= 0 ? 'text-emerald-600' : 'text-rose-600'
           }`}>
-            {cropHarvest ? formatCurrency(Math.abs(profit)) : '--'}
+            {cropHarvests.length > 0 ? formatCurrency(Math.abs(profit)) : '--'}
           </p>
         </div>
       </div>
 
-      {/* Harvest Information details */}
-      {cropHarvest && (
-        <div className="glass-card rounded-xl p-4 border border-slate-200 shadow-sm text-left space-y-3">
-          <div className="flex justify-between items-center">
-            <h3 className="font-display font-bold text-sm text-slate-800 flex items-center gap-1">
-              <Grape size={16} className="text-emerald-500" /> {t('common.harvest_details')}
-            </h3>
-            <button
-              onClick={() => onEditHarvest(cropHarvest)}
-              className="p-1 text-slate-400 hover:text-emerald-600 hover:bg-slate-50 rounded transition-all cursor-pointer flex items-center gap-1 text-[10px] font-semibold"
-              title="Edit Harvest Details"
-            >
-              <Pencil size={12} />
-              {t('common.edit')}
-            </button>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
-            <div>
-              <p className="text-slate-400 font-semibold">{t('harvest_form.yield_qty')}</p>
-              <p className="font-bold text-slate-700 mt-0.5">
-                {cropHarvest.yieldQty} {t(`harvest_form.unit_${cropHarvest.yieldUnit}`)}
-              </p>
-            </div>
-            <div>
-              <p className="text-slate-400 font-semibold">{t('harvest_form.price_per_unit')}</p>
-              <p className="font-bold text-slate-700 mt-0.5">{formatCurrency(cropHarvest.pricePerUnit)}</p>
-            </div>
-            <div>
-              <p className="text-slate-400 font-semibold">{t('harvest_form.revenue')}</p>
-              <p className="font-bold text-slate-700 mt-0.5">{formatCurrency(cropHarvest.revenue)}</p>
-            </div>
-            <div>
-              <p className="text-slate-400 font-semibold">{t('harvest_form.date')}</p>
-              <p className="font-bold text-slate-700 mt-0.5">{cropHarvest.date}</p>
-            </div>
-          </div>
+      {/* Long-Term Year Filter Dropdown */}
+      {isLongTerm && filterYears.length > 0 && (
+        <div className="flex items-center justify-between bg-white p-3.5 rounded-xl border border-slate-100 shadow-sm text-left">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Filter Timeline</span>
+          <select
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(e.target.value)}
+            className="px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white"
+          >
+            <option value="all">All Years</option>
+            {filterYears.map(yr => (
+              <option key={yr} value={yr}>Year {yr}</option>
+            ))}
+          </select>
         </div>
       )}
 
+      {/* Harvest Logs List Section */}
+      <div className="text-left space-y-3">
+        <h3 className="text-sm font-semibold text-slate-505 text-slate-500 uppercase tracking-wider flex items-center gap-1">
+          <Grape size={15} className="text-emerald-500" /> Harvest Records ({cropHarvests.length})
+        </h3>
+
+        {cropHarvests.length === 0 ? (
+          <div className="rounded-xl border border-slate-200 border-dashed bg-white p-6 text-center text-slate-400 italic text-xs">
+            No harvests logged for this cycle yet.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {cropHarvests
+              .sort((a, b) => new Date(b.date) - new Date(a.date))
+              .map((harv) => (
+                <div 
+                  key={harv.id}
+                  className="bg-white rounded-xl p-3 border border-slate-100 shadow-sm flex justify-between items-center"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                      <Grape size={15} />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-slate-750 text-slate-750 text-slate-700 text-xs leading-none">
+                        Yield: {harv.yieldQty} {t(`harvest_form.unit_${harv.yieldUnit}`)}
+                      </h4>
+                      <p className="text-[10px] text-slate-400 mt-1">
+                        {harv.date} {harv.pricePerUnit ? `• Price: ${formatCurrency(harv.pricePerUnit)} / unit` : ''}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="font-display font-bold text-slate-800 text-xs sm:text-sm">
+                      {formatCurrency(harv.revenue)}
+                    </span>
+                    <button
+                      onClick={() => onEditHarvest(harv)}
+                      className="p-1 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition-all cursor-pointer"
+                      title={t('common.edit')}
+                    >
+                      <Pencil size={13} />
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (window.confirm("Are you sure you want to delete this harvest log?")) {
+                          onDeleteHarvest(harv.id);
+                        }
+                      }}
+                      className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-all cursor-pointer"
+                      title={t('common.delete')}
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+          </div>
+        )}
+      </div>
+
       {/* Action Buttons for Active Crops */}
       {crop.status === 'active' && (
-        <div className="flex gap-3">
-          <button
-            onClick={() => {
-              setSelectedCropId(cropId);
-              onNavigate('expense_form');
-            }}
-            className="flex-1 py-3 px-4 rounded-xl border border-dashed border-amber-300 bg-amber-50/20 text-amber-850 hover:bg-amber-50 hover-scale hover-scale-active shadow-sm transition-all flex items-center justify-center gap-1.5 font-semibold text-xs cursor-pointer"
-          >
-            <Plus size={15} />
-            {t('common.btn_add_expense')}
-          </button>
-          <button
-            onClick={() => {
-              setSelectedCropId(cropId);
-              onNavigate('harvest_form');
-            }}
-            className="flex-1 py-3 px-4 rounded-xl border border-dashed border-emerald-300 bg-emerald-50/20 text-emerald-850 hover:bg-emerald-50 hover-scale hover-scale-active shadow-sm transition-all flex items-center justify-center gap-1.5 font-semibold text-xs cursor-pointer"
-          >
-            <Grape size={15} />
-            {t('common.btn_log_harvest')}
-          </button>
+        <div className="flex flex-col gap-2.5">
+          <div className="flex gap-3">
+            <button
+              onClick={() => {
+                setSelectedCropId(cropId);
+                onNavigate('expense_form');
+              }}
+              className="flex-1 py-3 px-4 rounded-xl border border-dashed border-amber-300 bg-amber-50/20 text-amber-850 hover:bg-amber-50 hover-scale hover-scale-active shadow-sm transition-all flex items-center justify-center gap-1.5 font-semibold text-xs cursor-pointer"
+            >
+              <Plus size={15} />
+              {t('common.btn_add_expense')}
+            </button>
+            <button
+              onClick={() => {
+                setSelectedCropId(cropId);
+                onNavigate('harvest_form');
+              }}
+              className="flex-1 py-3 px-4 rounded-xl border border-dashed border-emerald-300 bg-emerald-50/20 text-emerald-850 hover:bg-emerald-50 hover-scale hover-scale-active shadow-sm transition-all flex items-center justify-center gap-1.5 font-semibold text-xs cursor-pointer"
+            >
+              <Grape size={15} />
+              {t('common.btn_log_harvest')}
+            </button>
+          </div>
+
+          {crop.harvestType !== 'single' && (
+            <button
+              onClick={() => setIsConcludeModalOpen(true)}
+              className="w-full py-3 px-4 rounded-xl bg-slate-800 text-white hover:bg-slate-900 hover-scale hover-scale-active shadow-md transition-all flex items-center justify-center gap-1.5 font-bold text-xs cursor-pointer"
+            >
+              <CalendarCheck size={15} /> Conclude Crop Cycle
+            </button>
+          )}
         </div>
       )}
 
@@ -348,8 +435,59 @@ export default function CropDetails({
               ))}
           </div>
         )}
-      </div>
+      {/* Conclude Crop Cycle Modal */}
+      {isConcludeModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-sm w-full border border-slate-100 shadow-2xl text-left space-y-4 animate-scale-in">
+            <div className="flex items-center gap-2 text-slate-800">
+              <span className="text-xl">🚜</span>
+              <h3 className="font-display font-extrabold text-sm tracking-tight m-0">
+                Conclude Crop Cycle
+              </h3>
+            </div>
+            
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Are you sure you want to conclude the crop cycle for <strong>{crop.cropName}</strong>? Once concluded, it will be marked as finished.
+            </p>
 
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              onConcludeCrop(crop.id, conclusionDate);
+              setIsConcludeModalOpen(false);
+            }} className="space-y-3">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  Conclusion Date
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={conclusionDate}
+                  onChange={(e) => setConclusionDate(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm shadow-sm"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsConcludeModalOpen(false)}
+                  className="flex-1 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-655 font-semibold text-xs transition-all cursor-pointer text-center"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-semibold text-xs transition-all cursor-pointer text-center shadow-md shadow-slate-100"
+                >
+                  Confirm
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      </div>
     </div>
   );
 }

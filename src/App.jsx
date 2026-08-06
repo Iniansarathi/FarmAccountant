@@ -357,9 +357,12 @@ export default function App() {
       updatedHarvests = [...data.harvests, harvestWithId];
     }
     
-    // Mark crop as harvested
+    // Mark crop as harvested only if it is a single-harvest crop scheme
+    const targetCrop = data.crops.find(c => c.id === newHarvest.cropId);
+    const isSingleHarvest = !targetCrop || !targetCrop.harvestType || targetCrop.harvestType === 'single';
+
     const updatedCrops = data.crops.map(c => {
-      if (c.id === newHarvest.cropId) {
+      if (c.id === newHarvest.cropId && isSingleHarvest) {
         return { ...c, status: 'harvested' };
       }
       return c;
@@ -390,11 +393,47 @@ export default function App() {
     setCurrentView('dashboard');
   };
 
+  const handleConcludeCrop = (cropId, conclusionDate) => {
+    const updatedCrops = data.crops.map(c => {
+      if (c.id === cropId) {
+        return { 
+          ...c, 
+          status: 'harvested',
+          concludedDate: conclusionDate || new Date().toISOString().split('T')[0]
+        };
+      }
+      return c;
+    });
+    updateDataState({
+      ...data,
+      crops: updatedCrops
+    });
+  };
+
   const handleDeleteExpense = (expId) => {
     const updatedExpenses = data.expenses.filter(e => e.id !== expId);
     updateDataState({
       ...data,
       expenses: updatedExpenses
+    });
+  };
+
+  const handleDeleteHarvest = (harvId) => {
+    const targetHarvest = data.harvests.find(h => h.id === harvId);
+    const updatedHarvests = data.harvests.filter(h => h.id !== harvId);
+    
+    let updatedCrops = data.crops;
+    if (targetHarvest) {
+      const targetCrop = data.crops.find(c => c.id === targetHarvest.cropId);
+      if (targetCrop && targetCrop.harvestType === 'single') {
+        updatedCrops = data.crops.map(c => c.id === targetCrop.id ? { ...c, status: 'active' } : c);
+      }
+    }
+
+    updateDataState({
+      ...data,
+      crops: updatedCrops,
+      harvests: updatedHarvests
     });
   };
 
@@ -459,6 +498,8 @@ export default function App() {
             }}
             onDeleteCrop={handleDeleteCrop}
             onDeleteExpense={handleDeleteExpense}
+            onDeleteHarvest={handleDeleteHarvest}
+            onConcludeCrop={handleConcludeCrop}
             onNavigate={setCurrentView}
             setSelectedCropId={setSelectedCropId}
             onEditCrop={(crop) => {

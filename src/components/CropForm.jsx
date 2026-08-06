@@ -8,6 +8,7 @@ export default function CropForm({ onSave, onCancel, editingCrop }) {
   const [fieldAlias, setFieldAlias] = useState(editingCrop ? editingCrop.fieldAlias : '');
   const [landArea, setLandArea] = useState(editingCrop ? editingCrop.landArea.toString() : '');
   const [sowingDate, setSowingDate] = useState(editingCrop ? editingCrop.sowingDate : new Date().toISOString().split('T')[0]);
+  const [harvestType, setHarvestType] = useState(editingCrop ? (editingCrop.harvestType || 'single') : 'single');
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -16,11 +17,12 @@ export default function CropForm({ onSave, onCancel, editingCrop }) {
       return;
     }
     onSave({
-      id: editingCrop?.id, // will be undefined for new crops
+      id: editingCrop?.id,
       cropName,
       fieldAlias,
       landArea: parseFloat(landArea),
       sowingDate,
+      harvestType,
       status: editingCrop ? editingCrop.status : 'active'
     });
   };
@@ -119,6 +121,65 @@ export default function CropForm({ onSave, onCancel, editingCrop }) {
                 onChange={(e) => setSowingDate(e.target.value)}
                 className="w-full pl-10 pr-3 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-sm shadow-sm transition-all"
               />
+            </div>
+          </div>
+
+          {/* Harvest Type Selection */}
+          <div>
+            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+              Harvest Scheme *
+            </label>
+            <div className="space-y-2">
+              <label className={`flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer ${
+                harvestType === 'single' ? 'border-[#0C9D61] bg-emerald-50/20' : 'border-slate-200 bg-white hover:bg-slate-50'
+              }`}>
+                <input
+                  type="radio"
+                  name="harvestType"
+                  value="single"
+                  checked={harvestType === 'single'}
+                  onChange={() => setHarvestType('single')}
+                  className="mt-1 text-[#0C9D61] focus:ring-emerald-500"
+                />
+                <div className="text-xs">
+                  <span className="block font-bold text-slate-700">One-Time Harvest</span>
+                  <span className="block text-slate-400 font-semibold mt-0.5">Crop cycle automatically concludes after logging the first harvest (e.g. Groundnut, Paddy).</span>
+                </div>
+              </label>
+
+              <label className={`flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer ${
+                harvestType === 'multiple' ? 'border-[#0C9D61] bg-emerald-50/20' : 'border-slate-200 bg-white hover:bg-slate-50'
+              }`}>
+                <input
+                  type="radio"
+                  name="harvestType"
+                  value="multiple"
+                  checked={harvestType === 'multiple'}
+                  onChange={() => setHarvestType('multiple')}
+                  className="mt-1 text-[#0C9D61] focus:ring-emerald-500"
+                />
+                <div className="text-xs">
+                  <span className="block font-bold text-slate-700">Multiple Harvests</span>
+                  <span className="block text-slate-400 font-semibold mt-0.5">Harvest repeatedly; the cycle stays active until you manually conclude it (e.g. Banana, Tomato).</span>
+                </div>
+              </label>
+
+              <label className={`flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer ${
+                harvestType === 'longterm' ? 'border-[#0C9D61] bg-emerald-50/20' : 'border-slate-200 bg-white hover:bg-slate-50'
+              }`}>
+                <input
+                  type="radio"
+                  name="harvestType"
+                  value="longterm"
+                  checked={harvestType === 'longterm'}
+                  onChange={() => setHarvestType('longterm')}
+                  className="mt-1 text-[#0C9D61] focus:ring-emerald-500"
+                />
+                <div className="text-xs">
+                  <span className="block font-bold text-slate-700">Long-Term Continuous</span>
+                  <span className="block text-slate-400 font-semibold mt-0.5">Runs continuously for years (e.g. Coconut, Jasmine). Maintenance cost and yield are filtered by year.</span>
+                </div>
+              </label>
             </div>
           </div>
 

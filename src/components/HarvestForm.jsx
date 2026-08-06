@@ -20,6 +20,9 @@ export default function HarvestForm({ crops, defaultCropId, onSave, onCancel, ed
     selectCropsList.push(editCrop);
   }
 
+  const selectedCrop = crops.find(c => c.id === cropId);
+  const selectedHarvestType = selectedCrop?.harvestType || 'single';
+
   // Auto-calculate revenue
   useEffect(() => {
     if (yieldQty && pricePerUnit) {
@@ -125,6 +128,25 @@ export default function HarvestForm({ crops, defaultCropId, onSave, onCancel, ed
               <p className="text-xs text-rose-500 mt-1 font-semibold">
                 No active crops found. Please start a crop cycle first!
               </p>
+            )}
+
+            {selectedCrop && (
+              <div className="mt-2.5 p-3 rounded-xl border border-slate-100 bg-slate-50/50 space-y-0.5">
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Harvest Scheme Info</span>
+                {selectedHarvestType === 'single' ? (
+                  <p className="text-[11px] text-amber-800 font-medium leading-relaxed">
+                    🚜 <strong>One-Time Harvest:</strong> Saving this entry will automatically mark this crop cycle as completed.
+                  </p>
+                ) : selectedHarvestType === 'multiple' ? (
+                  <p className="text-[11px] text-emerald-800 font-medium leading-relaxed">
+                    🔁 <strong>Multiple Harvests:</strong> This crop supports multiple harvests. The cycle remains active.
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-emerald-800 font-medium leading-relaxed">
+                    🌳 <strong>Long-Term Continuous:</strong> Stays active for years. Costs and yields are filtered by year.
+                  </p>
+                )}
+              </div>
             )}
           </div>
 
