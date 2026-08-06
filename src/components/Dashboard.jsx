@@ -33,9 +33,6 @@ export default function Dashboard({
       .reduce((sum, exp) => sum + (Number(exp.cost) || 0), 0);
   };
 
-  const getCropHarvest = (cropId) => {
-    return data.harvests.find(h => h.cropId === cropId);
-  };
 
   const formatCurrency = (val) => {
     return `${t('dashboard.currency_symbol')}${Number(val).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
@@ -201,6 +198,9 @@ export default function Dashboard({
           <div className="space-y-3">
             {activeCrops.map((crop) => {
               const cropExp = getCropExpenses(crop.id);
+              const cropHarvests = data.harvests.filter(h => h.cropId === crop.id) || [];
+              const revenue = cropHarvests.reduce((sum, h) => sum + (Number(h.revenue) || 0), 0);
+              const profit = revenue - cropExp;
               return (
                 <div 
                   key={crop.id}
@@ -208,33 +208,55 @@ export default function Dashboard({
                     setSelectedCropId(crop.id);
                     onNavigate('crop_details');
                   }}
-                  className="glass-card rounded-xl p-4 flex items-center justify-between border border-slate-250/50 shadow-sm hover:border-emerald-300 hover:shadow transition-all cursor-pointer hover-scale hover-scale-active"
+                  className="glass-card rounded-2xl p-4 flex flex-col border border-slate-250/50 shadow-sm hover:border-emerald-350 hover:border-emerald-300 hover:shadow-md transition-all cursor-pointer hover-scale hover-scale-active bg-white space-y-3.5"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-800 flex items-center justify-center font-display font-bold">
-                      {crop.cropName.substring(0, 2).toUpperCase()}
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-slate-800 text-sm leading-snug">{crop.cropName}</h4>
-                      <div className="flex items-center gap-1 text-[11px] text-slate-500 mt-1">
-                        <MapPin size={10} className="text-slate-400" />
-                        <span>{crop.fieldAlias}</span>
-                        <span className="mx-1">•</span>
-                        <span>{crop.landArea} Ac</span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-800 flex items-center justify-center font-display font-bold shadow-inner">
+                        {crop.cropName.substring(0, 2).toUpperCase()}
+                      </div>
+                      <div className="text-left">
+                        <h4 className="font-semibold text-slate-800 text-sm leading-snug">{crop.cropName}</h4>
+                        <div className="flex items-center gap-1 text-[10px] text-slate-400 font-bold mt-1">
+                          <MapPin size={10} className="text-slate-450" />
+                          <span>{crop.fieldAlias}</span>
+                          <span className="mx-1">•</span>
+                          <span>{crop.landArea} Ac</span>
+                          {crop.harvestType && (
+                            <>
+                              <span className="mx-1">•</span>
+                              <span className="bg-slate-50 border border-slate-100 text-slate-655 px-1 py-0.2 rounded text-[9px] font-extrabold uppercase">
+                                {crop.harvestType === 'single' ? 'One-Time' : crop.harvestType === 'multiple' ? 'Multi-Harvest' : 'Long-Term'}
+                              </span>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-
-                  <div className="text-right">
-                    <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
-                      {t('dashboard.total_investment')}
-                    </p>
-                    <p className="font-display font-bold text-slate-800 text-sm mt-0.5">
-                      {formatCurrency(cropExp)}
-                    </p>
-                    <span className="inline-block px-2 py-0.5 text-[9px] font-bold rounded bg-emerald-50 text-emerald-700 mt-1 border border-emerald-100">
+                    <span className="inline-block px-2.5 py-0.5 text-[9px] font-extrabold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
                       {t('dashboard.status_active')}
                     </span>
+                  </div>
+
+                  <div className="border-t border-slate-100"></div>
+
+                  <div className="grid grid-cols-3 gap-2 text-center text-xs pt-0.5">
+                    <div className="space-y-0.5">
+                      <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Investment</span>
+                      <span className="block font-display font-bold text-slate-700">{formatCurrency(cropExp)}</span>
+                    </div>
+                    <div className="space-y-0.5">
+                      <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Revenue</span>
+                      <span className="block font-display font-bold text-slate-700">{formatCurrency(revenue)}</span>
+                    </div>
+                    <div className="space-y-0.5">
+                      <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Net</span>
+                      <span className={`block font-display font-extrabold ${
+                        profit >= 0 ? 'text-emerald-600' : 'text-rose-600'
+                      }`}>
+                        {profit >= 0 ? '+' : ''}{formatCurrency(profit)}
+                      </span>
+                    </div>
                   </div>
                 </div>
               );
@@ -258,8 +280,8 @@ export default function Dashboard({
           <div className="space-y-3">
             {harvestedCrops.map((crop) => {
               const cropExp = getCropExpenses(crop.id);
-              const harvest = getCropHarvest(crop.id);
-              const revenue = harvest ? Number(harvest.revenue) : 0;
+              const cropHarvests = data.harvests.filter(h => h.cropId === crop.id) || [];
+              const revenue = cropHarvests.reduce((sum, h) => sum + (Number(h.revenue) || 0), 0);
               const profit = revenue - cropExp;
               return (
                 <div 
@@ -268,43 +290,55 @@ export default function Dashboard({
                     setSelectedCropId(crop.id);
                     onNavigate('crop_details');
                   }}
-                  className="glass-card rounded-xl p-4 flex items-center justify-between border border-slate-250/50 shadow-sm hover:border-emerald-305 hover:border-emerald-300 hover:shadow transition-all cursor-pointer hover-scale hover-scale-active"
+                  className="glass-card rounded-2xl p-4 flex flex-col border border-slate-250/50 shadow-sm hover:border-emerald-350 hover:border-emerald-300 hover:shadow-md transition-all cursor-pointer hover-scale hover-scale-active bg-white space-y-3.5"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-slate-100 text-slate-650 flex items-center justify-center font-display font-bold">
-                      {crop.cropName.substring(0, 2).toUpperCase()}
-                    </div>
-                    <div className="text-left">
-                      <h4 className="font-semibold text-slate-800 text-sm leading-snug">{crop.cropName}</h4>
-                      <div className="flex items-center gap-1 text-[11px] text-slate-500 mt-1">
-                        <MapPin size={10} className="text-slate-400" />
-                        <span>{crop.fieldAlias}</span>
-                        <span className="mx-1">•</span>
-                        <span>{crop.landArea} {t('common.acres_abbreviation')}</span>
-                        {harvest && (
-                          <>
-                            <span className="mx-1">•</span>
-                            <span className="bg-slate-100 text-slate-600 px-1 py-0.5 rounded text-[9px] font-bold">
-                              {harvest.yieldQty} {t(`harvest_form.unit_${harvest.yieldUnit}`)}
-                            </span>
-                          </>
-                        )}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center font-display font-bold shadow-inner">
+                        {crop.cropName.substring(0, 2).toUpperCase()}
+                      </div>
+                      <div className="text-left">
+                        <h4 className="font-semibold text-slate-800 text-sm leading-snug">{crop.cropName}</h4>
+                        <div className="flex items-center gap-1 text-[10px] text-slate-400 font-bold mt-1">
+                          <MapPin size={10} className="text-slate-450" />
+                          <span>{crop.fieldAlias}</span>
+                          <span className="mx-1">•</span>
+                          <span>{crop.landArea} Ac</span>
+                          {crop.harvestType && (
+                            <>
+                              <span className="mx-1">•</span>
+                              <span className="bg-slate-50 border border-slate-100 text-slate-655 px-1 py-0.2 rounded text-[9px] font-extrabold uppercase">
+                                {crop.harvestType === 'single' ? 'One-Time' : crop.harvestType === 'multiple' ? 'Multi-Harvest' : 'Long-Term'}
+                              </span>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-
-                  <div className="text-right">
-                    <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
-                      {profit >= 0 ? t('dashboard.net_profit') : t('dashboard.net_loss')}
-                    </p>
-                    <p className={`font-display font-bold text-sm mt-0.5 ${
-                      profit >= 0 ? 'text-emerald-600' : 'text-rose-600'
-                    }`}>
-                      {formatCurrency(Math.abs(profit))}
-                    </p>
-                    <span className="inline-block px-2 py-0.5 text-[9px] font-bold rounded bg-slate-100 text-slate-600 mt-1 border border-slate-200">
+                    <span className="inline-block px-2.5 py-0.5 text-[9px] font-extrabold rounded-full bg-slate-100 text-slate-600 border border-slate-205">
                       {t('dashboard.status_harvested')}
                     </span>
+                  </div>
+
+                  <div className="border-t border-slate-100"></div>
+
+                  <div className="grid grid-cols-3 gap-2 text-center text-xs pt-0.5">
+                    <div className="space-y-0.5">
+                      <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Investment</span>
+                      <span className="block font-display font-bold text-slate-700">{formatCurrency(cropExp)}</span>
+                    </div>
+                    <div className="space-y-0.5">
+                      <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Revenue</span>
+                      <span className="block font-display font-bold text-slate-700">{formatCurrency(revenue)}</span>
+                    </div>
+                    <div className="space-y-0.5">
+                      <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Net</span>
+                      <span className={`block font-display font-extrabold ${
+                        profit >= 0 ? 'text-emerald-600' : 'text-rose-600'
+                      }`}>
+                        {profit >= 0 ? '+' : ''}{formatCurrency(profit)}
+                      </span>
+                    </div>
                   </div>
                 </div>
               );

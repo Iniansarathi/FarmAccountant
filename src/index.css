@@ -179,3 +179,25 @@ html, body, #root {
   background-color: #121826 !important;
   color: #f8fafc !important;
 }
+
+/* Fix date-picker indicator overlap/stretch on iOS & mobile Chrome */
+input[type="date"] {
+  position: relative;
+  -webkit-appearance: none;
+  appearance: none;
+  min-height: 1.2em;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  margin: 0;
+  padding: 0;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  opacity: 0; /* hides the native indicator so our Lucide icon acts as the visual cue, but tapping it still opens the picker */
+  z-index: 10;
+}
