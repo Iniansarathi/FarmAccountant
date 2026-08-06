@@ -69,11 +69,17 @@ export function initGoogleOAuth(onTokenReceived, onError) {
 }
 
 export function requestGoogleToken(forceConsent = false) {
-  if (!window.google || !window.google.accounts) {
-    throw new Error("google_blocked");
-  }
-  if (!tokenClient) {
-    throw new Error("client_not_initialized");
+  if (!window.google || !window.google.accounts || !tokenClient) {
+    console.warn("Google client script blocked or uninitialized. Falling back to direct OAuth redirect.");
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "336829707172-mockclientid.apps.googleusercontent.com";
+    const redirectUri = window.location.origin;
+    const scope = encodeURIComponent('https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile');
+    const responseType = 'token';
+    const state = 'google_oauth_fallback';
+    
+    const oauthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=${responseType}&scope=${scope}&state=${state}`;
+    window.location.href = oauthUrl;
+    return;
   }
   const promptValue = forceConsent ? 'consent select_account' : 'select_account';
   tokenClient.requestAccessToken({ prompt: promptValue });

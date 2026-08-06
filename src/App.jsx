@@ -154,6 +154,48 @@ export default function App() {
     );
   }, []);
 
+  // Handle Google OAuth Fallback Redirect Callback
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash && hash.includes('access_token') && hash.includes('google_oauth_fallback')) {
+      const params = new URLSearchParams(hash.substring(1));
+      const accessToken = params.get('access_token');
+      const expiresIn = params.get('expires_in') || '3600';
+      
+      // Clean hash from URL so it looks clean
+      window.history.replaceState("", document.title, window.location.pathname + window.location.search);
+      
+      if (accessToken) {
+        const handleCallbackLogin = async () => {
+          setSyncStatus('syncing');
+          try {
+            const userInfo = await fetchGoogleUserInfo(accessToken);
+            const loggedUser = {
+              email: userInfo.email,
+              name: userInfo.name,
+              picture: userInfo.picture,
+              type: 'google',
+              isMock: false
+            };
+            
+            // Save token and user in storage
+            localStorage.setItem('google_access_token', accessToken);
+            localStorage.setItem('google_token_expiry', (Date.now() + parseInt(expiresIn, 10) * 1000).toString());
+            
+            setGoogleToken(accessToken);
+            setUser(loggedUser);
+            localStorage.setItem('farm_current_user', JSON.stringify(loggedUser));
+          } catch (err) {
+            console.error("Redirect login failed:", err);
+            setSyncStatus('error');
+            alert("Google Sign-In failed during redirect. Please try again.");
+          }
+        };
+        handleCallbackLogin();
+      }
+    }
+  }, []);
+
   // Fetch/load user data when user changes
   useEffect(() => {
     if (!user) return;
