@@ -14,7 +14,7 @@ export async function sendUserHeartbeat(user, googleToken) {
     await fetch(url, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'text/plain;charset=utf-8'
       },
       body: JSON.stringify({
         action: 'registerUser',
@@ -51,7 +51,7 @@ export async function submitUserFeedback(user, message, screenshotBase64, device
   const response = await fetch(url, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json'
+      'Content-Type': 'text/plain;charset=utf-8'
     },
     body: JSON.stringify({
       action: 'submitFeedback',
@@ -94,12 +94,9 @@ export async function fetchAdminPortalData(googleToken) {
     return { users: mockUsers, feedbacks: mockFeedbacks, isMock: true };
   }
 
-  // Fetch with Authorization token to verify admin email
-  const response = await fetch(`${url}?action=getAdminData`, {
-    method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${googleToken}`
-    }
+  // Fetch with token in query params to bypass CORS preflight header restrictions
+  const response = await fetch(`${url}?action=getAdminData&token=${encodeURIComponent(googleToken)}`, {
+    method: 'GET'
   });
 
   if (!response.ok) {
