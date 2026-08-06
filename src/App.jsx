@@ -34,7 +34,13 @@ export default function App() {
   const [editingExpense, setEditingExpense] = useState(null);
   const [editingHarvest, setEditingHarvest] = useState(null);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
-  const [theme, setTheme] = useState(() => localStorage.getItem('farm_theme') || 'light');
+  const [theme, setTheme] = useState(() => {
+    try {
+      return localStorage.getItem('farm_theme') || 'light';
+    } catch {
+      return 'light';
+    }
+  });
   const scrollContainerRef = useRef(null);
 
   // Sync theme with class list
@@ -44,7 +50,11 @@ export default function App() {
     } else {
       document.documentElement.classList.remove('dark');
     }
-    localStorage.setItem('farm_theme', theme);
+    try {
+      localStorage.setItem('farm_theme', theme);
+    } catch (e) {
+      console.warn("Storage writing blocked:", e);
+    }
   }, [theme]);
 
   // Reset scroll to top on navigation/view change
