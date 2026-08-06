@@ -11,9 +11,33 @@ export default function Sidebar({
   onNavigate,
   onSwitchGoogleAccount,
   theme,
-  onToggleTheme
+  onToggleTheme,
+  deferredPrompt,
+  onTriggerInstall,
+  onShowIOSInstallGuide,
+  onOpenFeedback
 }) {
   const { t } = useTranslation();
+
+  const isStandalone = typeof window !== 'undefined' && (
+    window.matchMedia('(display-mode: standalone)').matches || 
+    window.navigator.standalone
+  );
+
+  const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+  const handleInstallClick = () => {
+    if (isIOS) {
+      onShowIOSInstallGuide();
+      onClose();
+    } else if (deferredPrompt) {
+      onTriggerInstall();
+      onClose();
+    } else {
+      alert("To install FarmAccountant: \n\n• On Android/Chrome: Tap the 3 dots in the top-right corner of Chrome and select 'Add to Home screen' or 'Install app'.\n• On iPhone/Safari: Tap the Share button at the bottom and select 'Add to Home screen'.");
+      onClose();
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -29,10 +53,17 @@ export default function Sidebar({
       <div className="relative flex w-full max-w-xs flex-col bg-white h-full shadow-2xl transition-transform duration-350 ease-out border-r border-slate-100 z-10 animate-slide-in">
         
         {/* Drawer Header */}
-        <div className="flex items-center justify-between px-4 py-4 border-b border-slate-105 border-slate-100 bg-emerald-800 text-white">
+        <div className="flex items-center justify-between px-4 py-4 border-b border-slate-100 bg-[#0C5A52] text-white">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-white text-emerald-800 flex items-center justify-center font-display font-extrabold text-sm">
-              fa
+            <div className="w-8 h-8 rounded-lg bg-white text-[#0C9D61] flex items-center justify-center font-display font-extrabold text-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" className="w-4.5 h-4.5 fill-[#0C9D61]">
+                <rect x="25" y="55" width="10" height="25" rx="2.5"/>
+                <rect x="39" y="41" width="10" height="39" rx="2.5"/>
+                <rect x="53" y="31" width="10" height="49" rx="2.5"/>
+                <path d="M 58 31 C 58 19, 46 19, 46 19" stroke="#0C9D61" stroke-width="5.5" stroke-linecap="round" fill="none"/>
+                <path d="M 46 19 C 29 19, 26 37, 43 39 C 47 33, 47 24, 46 19 Z"/>
+                <path d="M 46 19 C 63 17, 66 35, 49 37 C 45 31, 45 24, 46 19 Z"/>
+              </svg>
             </div>
             <span className="font-display font-extrabold text-md tracking-tight">farmaccountant</span>
           </div>
@@ -134,6 +165,31 @@ export default function Sidebar({
           >
             <RefreshCw size={15} /> {t('sidebar.nav_analytics')}
           </button>
+
+          {!isStandalone && (
+            <button
+              onClick={handleInstallClick}
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-[#0c9d61] hover:bg-emerald-50/50 hover:text-emerald-700 font-bold text-xs rounded-lg transition-all cursor-pointer text-left"
+            >
+              <Smartphone size={15} /> Install App Shortcut
+            </button>
+          )}
+
+          <button
+            onClick={() => { onOpenFeedback(); onClose(); }}
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-slate-655 hover:bg-emerald-50/50 hover:text-emerald-700 text-slate-700 font-semibold text-xs rounded-lg transition-all cursor-pointer text-left"
+          >
+            <span className="text-sm">💬</span> Send Feedback
+          </button>
+
+          {user?.email === 'iniansarathi2003@gmail.com' && (
+            <button
+              onClick={() => { onNavigate('admin_portal'); onClose(); }}
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-rose-600 bg-rose-50/20 hover:bg-rose-55 hover:text-rose-700 font-bold text-xs rounded-lg transition-all cursor-pointer text-left"
+            >
+              🛡️ Admin Portal
+            </button>
+          )}
         </div>
 
         {/* Theme Toggle Section */}

@@ -82,8 +82,15 @@ export default function Header({ user, syncStatus, onTriggerSync, onOpenSidebar,
         >
           <Menu size={18} />
         </button>
-        <div className="w-8 h-8 rounded-xl bg-emerald-600 flex items-center justify-center shadow-md shadow-emerald-200">
-          <span className="font-display font-extrabold text-white text-md">fa</span>
+        <div className="w-8 h-8 rounded-xl bg-[#0C9D61] flex items-center justify-center shadow-md shadow-[#0c9d61]/25">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" className="w-4.5 h-4.5 fill-white">
+            <rect x="25" y="55" width="10" height="25" rx="2.5"/>
+            <rect x="39" y="41" width="10" height="39" rx="2.5"/>
+            <rect x="53" y="31" width="10" height="49" rx="2.5"/>
+            <path d="M 58 31 C 58 19, 46 19, 46 19" stroke="white" stroke-width="5.5" stroke-linecap="round" fill="none"/>
+            <path d="M 46 19 C 29 19, 26 37, 43 39 C 47 33, 47 24, 46 19 Z"/>
+            <path d="M 46 19 C 63 17, 66 35, 49 37 C 45 31, 45 24, 46 19 Z"/>
+          </svg>
         </div>
         <div className="text-left">
           <h1 className="font-display font-bold text-md text-slate-800 tracking-tight m-0 leading-none">

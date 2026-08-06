@@ -13,10 +13,12 @@ import ExpenseForm from './components/ExpenseForm';
 import HarvestForm from './components/HarvestForm';
 import CropDetails from './components/CropDetails';
 import Analytics from './components/Analytics';
+import AdminPortal from './components/AdminPortal';
 
 // Services
 import { initGoogleOAuth, fetchGoogleUserInfo, getStoredGoogleToken, clearAuthSession, requestGoogleToken, registerPasswordForGoogleUser } from './services/auth';
 import { loadUserData, saveUserData } from './services/storage';
+import { submitUserFeedback, sendUserHeartbeat } from './services/adminApi';
 
 export default function App() {
   const { t } = useTranslation();
@@ -34,6 +36,13 @@ export default function App() {
   const [editingExpense, setEditingExpense] = useState(null);
   const [editingHarvest, setEditingHarvest] = useState(null);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState('');
+  const [feedbackScreenshot, setFeedbackScreenshot] = useState('');
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  const [feedbackSubmitSuccess, setFeedbackSubmitSuccess] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [showIOSInstallGuide, setShowIOSInstallGuide] = useState(false);
   const [theme, setTheme] = useState(() => {
     try {
       return localStorage.getItem('farm_theme') || 'light';
@@ -42,6 +51,18 @@ export default function App() {
     }
   });
   const scrollContainerRef = useRef(null);
+
+  // PWA Install Prompt Listener
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
 
   // Sync theme with class list
   useEffect(() => {
@@ -148,6 +169,11 @@ export default function App() {
           setData(loaded.data || { crops: [], expenses: [], harvests: [] });
           if (loaded.fileId) setFileId(loaded.fileId);
           setSyncStatus(user.type === 'google' ? 'synced' : 'local');
+          
+          // Google user central database heartbeat registration
+          if (user.type === 'google' && googleToken) {
+            sendUserHeartbeat(user, googleToken);
+          }
         }
       } catch (err) {
         console.error("Failed to fetch data:", err);
@@ -411,8 +437,81 @@ export default function App() {
         return (
           <Analytics data={data} />
         );
+      case 'admin_portal':
+        return (
+          <AdminPortal googleToken={googleToken} onBack={() => setCurrentView('dashboard')} />
+        );
       default:
         return <div className="p-6 text-center">View under development</div>;
+    }
+  };
+
+  const handleTriggerInstall = () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then((choiceResult) => {
+      if (choiceResult.outcome === 'accepted') {
+        console.log('User accepted PWA installation');
+      }
+      setDeferredPrompt(null);
+    });
+  };
+
+  const handleScreenshotChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 500;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > MAX_WIDTH) {
+          height = Math.round((height * MAX_WIDTH) / width);
+          width = MAX_WIDTH;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.6);
+        setFeedbackScreenshot(compressedBase64);
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleFeedbackSubmit = async (e) => {
+    e.preventDefault();
+    if (!feedbackMessage.trim()) return;
+
+    setIsSubmittingFeedback(true);
+    try {
+      const deviceMeta = typeof navigator !== 'undefined' 
+        ? `${navigator.userAgent} (${window.innerWidth}x${window.innerHeight})`
+        : 'Unknown Client';
+        
+      await submitUserFeedback(user, feedbackMessage, feedbackScreenshot, deviceMeta);
+      setFeedbackSubmitSuccess(true);
+      setFeedbackMessage('');
+      setFeedbackScreenshot('');
+      
+      setTimeout(() => {
+        setIsFeedbackModalOpen(false);
+        setFeedbackSubmitSuccess(false);
+      }, 2500);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to send feedback. Please check your internet connection and try again.");
+    } finally {
+      setIsSubmittingFeedback(false);
     }
   };
 
@@ -484,6 +583,10 @@ export default function App() {
         onSwitchGoogleAccount={handleSwitchGoogleAccount}
         theme={theme}
         onToggleTheme={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')}
+        deferredPrompt={deferredPrompt}
+        onTriggerInstall={handleTriggerInstall}
+        onShowIOSInstallGuide={() => setShowIOSInstallGuide(true)}
+        onOpenFeedback={() => setIsFeedbackModalOpen(true)}
       />
 
       {/* Main View Area */}
@@ -542,6 +645,163 @@ export default function App() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* iOS PWA Install Guide Modal */}
+      {showIOSInstallGuide && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-sm w-full border border-slate-100 shadow-2xl text-left space-y-4 animate-scale-in">
+            <div className="flex items-center gap-2 text-emerald-800">
+              <span className="text-xl">📲</span>
+              <h3 className="font-display font-extrabold text-sm tracking-tight m-0">
+                Install on iPhone / iPad
+              </h3>
+            </div>
+            
+            <p className="text-xs text-slate-500 leading-relaxed">
+              To install <strong>FarmAccountant</strong> on your iOS device screen, please follow these simple steps inside your Safari browser:
+            </p>
+
+            <ol className="space-y-3 text-xs text-slate-600 font-medium">
+              <li className="flex items-start gap-2.5">
+                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center text-[10px] font-extrabold">1</span>
+                <span>Tap the <strong>Share</strong> button <span className="inline-block bg-slate-100 px-1 py-0.5 rounded text-sm">📤</span> at the bottom of the browser screen.</span>
+              </li>
+              <li className="flex items-start gap-2.5">
+                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center text-[10px] font-extrabold">2</span>
+                <span>Scroll down the menu and select <strong>"Add to Home Screen"</strong> <span className="inline-block bg-slate-100 px-1.5 py-0.5 rounded font-extrabold text-sm font-sans">＋</span>.</span>
+              </li>
+              <li className="flex items-start gap-2.5">
+                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center text-[10px] font-extrabold">3</span>
+                <span>Tap <strong>"Add"</strong> in the top-right corner to complete the installation!</span>
+              </li>
+            </ol>
+
+            <button
+              onClick={() => setShowIOSInstallGuide(false)}
+              className="w-full mt-2 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition-all cursor-pointer text-center shadow-md shadow-emerald-100"
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
+      {/* Feedback Submission Modal */}
+      {isFeedbackModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-sm w-full border border-slate-100 shadow-2xl text-left space-y-4 animate-scale-in">
+            <div className="flex items-center justify-between text-slate-800">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">💬</span>
+                <h3 className="font-display font-extrabold text-sm tracking-tight m-0">
+                  Send Feedback
+                </h3>
+              </div>
+              {!isSubmittingFeedback && !feedbackSubmitSuccess && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsFeedbackModalOpen(false);
+                    setFeedbackMessage('');
+                    setFeedbackScreenshot('');
+                  }}
+                  className="text-slate-400 hover:text-slate-600 text-lg cursor-pointer"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {feedbackSubmitSuccess ? (
+              <div className="py-6 text-center space-y-2">
+                <span className="text-4xl">🎉</span>
+                <h4 className="font-bold text-emerald-800 text-sm">Feedback Sent!</h4>
+                <p className="text-xs text-slate-500">Thank you for helping us improve FarmAccountant.</p>
+              </div>
+            ) : (
+              <form onSubmit={handleFeedbackSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                    Your Message
+                  </label>
+                  <textarea
+                    required
+                    value={feedbackMessage}
+                    onChange={(e) => setFeedbackMessage(e.target.value)}
+                    placeholder="Describe your issue, suggestion, or request here..."
+                    rows={4}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm shadow-sm transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                    Attach Screenshot (Optional)
+                  </label>
+                  <div className="mt-1 flex items-center justify-center border border-dashed border-slate-200 rounded-xl p-4 bg-slate-50/50 hover:bg-slate-50 transition-all relative">
+                    {feedbackScreenshot ? (
+                      <div className="relative w-full flex flex-col items-center">
+                        <img
+                          src={feedbackScreenshot}
+                          alt="Screenshot preview"
+                          className="max-h-24 object-contain rounded-lg border border-slate-200 shadow-sm"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setFeedbackScreenshot('')}
+                          className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center shadow hover:bg-rose-600 cursor-pointer"
+                          title="Remove screenshot"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer text-slate-400 hover:text-emerald-700 transition-colors">
+                        <span className="text-2xl">📸</span>
+                        <span className="text-[10px] font-bold mt-1">Upload image or take photo</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleScreenshotChange}
+                          className="hidden"
+                        />
+                      </label>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    disabled={isSubmittingFeedback}
+                    onClick={() => {
+                      setIsFeedbackModalOpen(false);
+                      setFeedbackMessage('');
+                      setFeedbackScreenshot('');
+                    }}
+                    className="flex-1 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-655 font-semibold text-xs transition-all cursor-pointer text-center disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmittingFeedback || !feedbackMessage.trim()}
+                    className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition-all cursor-pointer text-center shadow-md shadow-emerald-100 flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSubmittingFeedback ? (
+                      <>
+                        <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                        <span>Sending...</span>
+                      </>
+                    ) : (
+                      <span>Submit</span>
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}
