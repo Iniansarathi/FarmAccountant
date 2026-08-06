@@ -232,29 +232,6 @@ export default function CropDetails({
         </div>
       </div>
 
-      {/* Financial Summary card */}
-      <div className="grid grid-cols-3 gap-2">
-        <div className="glass-card rounded-xl p-3 text-center border border-slate-100 shadow-sm">
-          <p className="text-[10px] text-slate-400 uppercase font-bold">{t('dashboard.total_investment')}</p>
-          <p className="font-display font-bold text-slate-700 mt-0.5">{formatCurrency(totalExpense)}</p>
-        </div>
-        <div className="glass-card rounded-xl p-3 text-center border border-slate-100 shadow-sm">
-          <p className="text-[10px] text-slate-400 uppercase font-bold">{t('dashboard.total_revenue')}</p>
-          <p className="font-display font-bold text-slate-700 mt-0.5">{formatCurrency(revenue)}</p>
-        </div>
-        <div className={`glass-card rounded-xl p-3 text-center border shadow-sm ${
-          cropHarvests.length === 0 ? 'border-slate-100 opacity-60' : profit >= 0 ? 'border-emerald-200 bg-emerald-50/20' : 'border-rose-200 bg-rose-50/20'
-        }`}>
-          <p className="text-[10px] text-slate-400 uppercase font-bold">
-            {profit >= 0 ? t('dashboard.net_profit') : t('dashboard.net_loss')}
-          </p>
-          <p className={`font-display font-bold mt-0.5 ${
-            cropHarvests.length === 0 ? 'text-slate-500' : profit >= 0 ? 'text-emerald-600' : 'text-rose-600'
-          }`}>
-            {cropHarvests.length > 0 ? formatCurrency(Math.abs(profit)) : '--'}
-          </p>
-        </div>
-      </div>
 
       {/* Long-Term Year Filter Dropdown */}
       {isLongTerm && filterYears.length > 0 && (
@@ -435,6 +412,32 @@ export default function CropDetails({
               ))}
           </div>
         )}
+      </div>
+
+      {/* Financial Summary card (At bottom of page) */}
+      <div className="grid grid-cols-3 gap-2 pt-2">
+        <div className="glass-card rounded-xl p-3 text-center border border-slate-100 shadow-sm">
+          <p className="text-[10px] text-slate-400 uppercase font-bold">{t('dashboard.total_investment')}</p>
+          <p className="font-display font-bold text-slate-700 mt-0.5">{formatCurrency(totalExpense)}</p>
+        </div>
+        <div className="glass-card rounded-xl p-3 text-center border border-slate-100 shadow-sm">
+          <p className="text-[10px] text-slate-400 uppercase font-bold">{t('dashboard.total_revenue')}</p>
+          <p className="font-display font-bold text-slate-700 mt-0.5">{formatCurrency(revenue)}</p>
+        </div>
+        <div className={`glass-card rounded-xl p-3 text-center border shadow-sm ${
+          cropHarvests.length === 0 ? 'border-slate-100 opacity-60' : profit >= 0 ? 'border-emerald-200 bg-emerald-50/20' : 'border-rose-200 bg-rose-50/20'
+        }`}>
+          <p className="text-[10px] text-slate-400 uppercase font-bold">
+            {profit >= 0 ? t('dashboard.net_profit') : t('dashboard.net_loss')}
+          </p>
+          <p className={`font-display font-bold mt-0.5 ${
+            cropHarvests.length === 0 ? 'text-slate-500' : profit >= 0 ? 'text-emerald-600' : 'text-rose-600'
+          }`}>
+            {cropHarvests.length > 0 ? formatCurrency(Math.abs(profit)) : '--'}
+          </p>
+        </div>
+      </div>
+
       {/* Conclude Crop Cycle Modal */}
       {isConcludeModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
@@ -487,7 +490,6 @@ export default function CropDetails({
           </div>
         </div>
       )}
-      </div>
     </div>
   );
 }

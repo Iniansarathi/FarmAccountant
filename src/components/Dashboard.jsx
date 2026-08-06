@@ -252,9 +252,15 @@ export default function Dashboard({
                     <div className="space-y-0.5">
                       <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Net</span>
                       <span className={`block font-display font-extrabold ${
-                        profit >= 0 ? 'text-emerald-600' : 'text-rose-600'
+                        cropHarvests.length === 0 
+                          ? 'text-slate-400' 
+                          : profit >= 0 
+                            ? 'text-emerald-600' 
+                            : 'text-rose-600'
                       }`}>
-                        {profit >= 0 ? '+' : ''}{formatCurrency(profit)}
+                        {cropHarvests.length > 0 
+                          ? `${profit >= 0 ? '+' : ''}${formatCurrency(profit)}` 
+                          : '--'}
                       </span>
                     </div>
                   </div>
@@ -334,9 +340,15 @@ export default function Dashboard({
                     <div className="space-y-0.5">
                       <span className="block text-[9px] font-bold text-slate-400 uppercase tracking-wider">Net</span>
                       <span className={`block font-display font-extrabold ${
-                        profit >= 0 ? 'text-emerald-600' : 'text-rose-600'
+                        cropHarvests.length === 0 
+                          ? 'text-slate-400' 
+                          : profit >= 0 
+                            ? 'text-emerald-600' 
+                            : 'text-rose-600'
                       }`}>
-                        {profit >= 0 ? '+' : ''}{formatCurrency(profit)}
+                        {cropHarvests.length > 0 
+                          ? `${profit >= 0 ? '+' : ''}${formatCurrency(profit)}` 
+                          : '--'}
                       </span>
                     </div>
                   </div>
