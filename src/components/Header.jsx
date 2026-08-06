@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Cloud, CloudOff, RefreshCw, Smartphone, Globe, Menu, LogOut } from 'lucide-react';
 
-export default function Header({ user, syncStatus, onTriggerSync, onOpenSidebar, onLogout }) {
+export default function Header({ user, syncStatus, onTriggerSync, onOpenSidebar, onLogout, onSetupLocalPassword }) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const { t, i18n } = useTranslation();
 
@@ -160,6 +160,22 @@ export default function Header({ user, syncStatus, onTriggerSync, onOpenSidebar,
                     <span>{user?.type === 'google' ? 'Google Authenticated' : 'Device Local Account'}</span>
                   </div>
                 </div>
+                
+                {/* Set Password Option (Only for Google Users) */}
+                {user?.type === 'google' && (
+                  <div className="py-1 border-t border-slate-100">
+                    <button
+                      onClick={() => {
+                        setIsProfileOpen(false);
+                        onSetupLocalPassword();
+                      }}
+                      className="w-full text-center py-1.5 px-3 rounded-lg border border-slate-200 bg-white text-slate-700 hover:text-emerald-700 hover:bg-emerald-50 hover:border-emerald-200 font-semibold text-[10px] transition-all cursor-pointer shadow-sm flex items-center justify-center gap-1.5"
+                    >
+                      <span>🔑</span>
+                      <span>Link Offline local Password</span>
+                    </button>
+                  </div>
+                )}
                 
                 {/* Logout Button */}
                 <div className="pt-1.5 border-t border-slate-100">

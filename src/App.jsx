@@ -15,7 +15,7 @@ import CropDetails from './components/CropDetails';
 import Analytics from './components/Analytics';
 
 // Services
-import { initGoogleOAuth, fetchGoogleUserInfo, getStoredGoogleToken, clearAuthSession, requestGoogleToken } from './services/auth';
+import { initGoogleOAuth, fetchGoogleUserInfo, getStoredGoogleToken, clearAuthSession, requestGoogleToken, registerPasswordForGoogleUser } from './services/auth';
 import { loadUserData, saveUserData } from './services/storage';
 
 export default function App() {
@@ -33,6 +33,7 @@ export default function App() {
   const [editingCrop, setEditingCrop] = useState(null);
   const [editingExpense, setEditingExpense] = useState(null);
   const [editingHarvest, setEditingHarvest] = useState(null);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const scrollContainerRef = useRef(null);
 
   // Reset scroll to top on navigation/view change
@@ -173,6 +174,24 @@ export default function App() {
   const handleSwitchGoogleAccount = () => {
     setIsSidebarOpen(false);
     requestGoogleToken();
+  };
+
+  const handleLinkLocalPassword = (password) => {
+    if (!user || user.type !== 'google') return;
+    if (!password || password.length < 4) {
+      alert("Password must be at least 4 characters.");
+      return;
+    }
+    try {
+      registerPasswordForGoogleUser(user.email, password);
+      // Copy current data state to local storage for this email username
+      localStorage.setItem(`farm_data_local_${user.email}`, JSON.stringify(data));
+      alert(`Successfully registered offline password!\n\nEmail: ${user.email}\nPassword: ${password}\n\nAll your current crop logs have been copied over. You can now use this email/password to log in locally when Google Sign-In is blocked.`);
+      setIsPasswordModalOpen(false);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to register local offline password.");
+    }
   };
 
   const triggerManualSync = async () => {
@@ -389,6 +408,7 @@ export default function App() {
         onTriggerSync={triggerManualSync}
         onOpenSidebar={() => setIsSidebarOpen(true)}
         onLogout={handleLogout}
+        onSetupLocalPassword={() => setIsPasswordModalOpen(true)}
       />
 
       {/* Horizontal Sub-Navbar (Navigation below the top nav bar) */}
@@ -445,6 +465,61 @@ export default function App() {
       <main className="flex-1 flex flex-col pb-4 md:pb-6">
         {renderView()}
       </main>
+
+      {/* Password Modal */}
+      {isPasswordModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-sm w-full border border-slate-100 shadow-2xl text-left space-y-4 animate-scale-in">
+            <div className="flex items-center gap-2 text-emerald-800">
+              <span className="text-xl">🔑</span>
+              <h3 className="font-display font-bold text-lg m-0">Link Offline Password</h3>
+            </div>
+            
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Create a password to secure your data locally. You can use your email ID (<strong>{user?.email}</strong>) and this password to log in directly when Google Sign-in is blocked. All your current data will be copied to your local account.
+            </p>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const pwd = e.target.elements.localPassword.value;
+                handleLinkLocalPassword(pwd);
+              }}
+              className="space-y-3"
+            >
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                  New Password
+                </label>
+                <input
+                  type="password"
+                  name="localPassword"
+                  required
+                  placeholder="At least 4 characters"
+                  minLength={4}
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm shadow-sm"
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsPasswordModalOpen(false)}
+                  className="flex-1 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-655 font-semibold text-xs transition-all cursor-pointer text-center"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition-all cursor-pointer text-center shadow-md shadow-emerald-100"
+                >
+                  Save Password
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -101,3 +101,14 @@ export function clearAuthSession() {
   currentToken = null;
   tokenExpiry = null;
 }
+
+export function registerPasswordForGoogleUser(email, password) {
+  const users = getLocalUsers();
+  const existingIndex = users.findIndex(u => u.username.toLowerCase() === email.toLowerCase());
+  if (existingIndex > -1) {
+    users[existingIndex].password = password;
+  } else {
+    users.push({ username: email, password });
+  }
+  localStorage.setItem('farm_local_users', JSON.stringify(users));
+}
