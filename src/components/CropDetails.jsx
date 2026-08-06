@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowLeft, Trash2, Calendar, MapPin, Layers, Receipt, Plus, Grape, Pencil, CalendarCheck } from 'lucide-react';
+import { ArrowLeft, Trash2, Calendar, MapPin, Layers, Receipt, Plus, Grape, Pencil, CalendarCheck, PieChart as PieIcon } from 'lucide-react';
+import { ResponsiveContainer, PieChart as RechartsPieChart, Pie, Cell, Tooltip as RechartsTooltip } from 'recharts';
+
 
 export default function CropDetails({ 
   cropId, 
@@ -48,8 +50,8 @@ export default function CropDetails({
     : rawHarvests;
 
   const totalExpense = cropExpenses.reduce((sum, e) => sum + (Number(e.cost) || 0), 0);
-  const revenue = cropHarvests.reduce((sum, h) => sum + (Number(h.revenue) || 0), 0);
-  const profit = revenue - totalExpense;
+
+
 
   const getFilterYears = () => {
     const years = new Set();
@@ -86,6 +88,19 @@ export default function CropDetails({
         return t('expense_form.stage_misc');
     }
   };
+
+  const expenseByCategory = cropExpenses.reduce((acc, exp) => {
+    const stage = exp.stage || 'misc';
+    acc[stage] = (acc[stage] || 0) + (Number(exp.cost) || 0);
+    return acc;
+  }, {});
+
+  const pieData = Object.keys(expenseByCategory).map(key => ({
+    name: getStageLabel(key),
+    value: expenseByCategory[key]
+  })).filter(item => item.value > 0);
+
+  const COLORS = ['#10b981', '#f59e0b', '#3b82f6', '#ec4899', '#8b5cf6', '#ef4444', '#64748b'];
   const renderExpenseDetails = (exp) => {
     if (!exp.details) return null;
     
@@ -414,28 +429,71 @@ export default function CropDetails({
         )}
       </div>
 
-      {/* Financial Summary card (At bottom of page) */}
-      <div className="grid grid-cols-3 gap-2 pt-2">
-        <div className="glass-card rounded-xl p-3 text-center border border-slate-100 shadow-sm">
-          <p className="text-[10px] text-slate-400 uppercase font-bold">{t('dashboard.total_investment')}</p>
-          <p className="font-display font-bold text-slate-700 mt-0.5">{formatCurrency(totalExpense)}</p>
-        </div>
-        <div className="glass-card rounded-xl p-3 text-center border border-slate-100 shadow-sm">
-          <p className="text-[10px] text-slate-400 uppercase font-bold">{t('dashboard.total_revenue')}</p>
-          <p className="font-display font-bold text-slate-700 mt-0.5">{formatCurrency(revenue)}</p>
-        </div>
-        <div className={`glass-card rounded-xl p-3 text-center border shadow-sm ${
-          cropHarvests.length === 0 ? 'border-slate-100 opacity-60' : profit >= 0 ? 'border-emerald-200 bg-emerald-50/20' : 'border-rose-200 bg-rose-50/20'
-        }`}>
-          <p className="text-[10px] text-slate-400 uppercase font-bold">
-            {profit >= 0 ? t('dashboard.net_profit') : t('dashboard.net_loss')}
-          </p>
-          <p className={`font-display font-bold mt-0.5 ${
-            cropHarvests.length === 0 ? 'text-slate-500' : profit >= 0 ? 'text-emerald-600' : 'text-rose-600'
-          }`}>
-            {cropHarvests.length > 0 ? formatCurrency(Math.abs(profit)) : '--'}
-          </p>
-        </div>
+      {/* Expense Breakdown Card (Financial Analytics) */}
+      <div className="glass-card rounded-2xl p-5 border border-slate-200 shadow-sm text-left">
+        <h3 className="font-display font-bold text-sm text-slate-800 flex items-center gap-1.5 mb-4">
+          <PieIcon size={16} className="text-emerald-500" />
+          Expense Breakdown
+        </h3>
+
+        {pieData.length === 0 ? (
+          <div className="h-32 flex flex-col items-center justify-center border border-dashed border-slate-200 rounded-xl text-slate-400 text-xs italic">
+            No expenses logged for this cycle.
+          </div>
+        ) : (
+          <div className="flex flex-col sm:flex-row items-center justify-around gap-6">
+            {/* Chart */}
+            <div className="w-36 h-36 relative flex items-center justify-center shrink-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <RechartsPieChart>
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={42}
+                    outerRadius={58}
+                    paddingAngle={3}
+                    dataKey="value"
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <RechartsTooltip formatter={(value) => formatCurrency(value)} />
+                </RechartsPieChart>
+              </ResponsiveContainer>
+
+              {/* Total Spent Center Badge */}
+              <div className="absolute flex flex-col items-center justify-center text-center pointer-events-none">
+                <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider leading-none">Total</span>
+                <span className="text-xs font-extrabold text-slate-800 font-display mt-0.5 leading-none">
+                  {formatCurrency(totalExpense)}
+                </span>
+              </div>
+            </div>
+
+            {/* Legends & Details */}
+            <div className="flex-1 space-y-2 w-full">
+              {pieData.map((item, index) => {
+                const percent = totalExpense > 0 ? ((item.value / totalExpense) * 100).toFixed(0) : 0;
+                return (
+                  <div key={item.name} className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                      <span className="text-slate-600 font-medium">{item.name}</span>
+                    </div>
+                    <div className="text-right font-semibold text-slate-800 flex items-center gap-2">
+                      <span>{formatCurrency(item.value)}</span>
+                      <span className="text-[9px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-bold">
+                        {percent}%
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Conclude Crop Cycle Modal */}
