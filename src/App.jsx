@@ -34,7 +34,18 @@ export default function App() {
   const [editingExpense, setEditingExpense] = useState(null);
   const [editingHarvest, setEditingHarvest] = useState(null);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [theme, setTheme] = useState(() => localStorage.getItem('farm_theme') || 'light');
   const scrollContainerRef = useRef(null);
+
+  // Sync theme with class list
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('farm_theme', theme);
+  }, [theme]);
 
   // Reset scroll to top on navigation/view change
   useEffect(() => {
@@ -459,6 +470,8 @@ export default function App() {
         onLogout={handleLogout}
         onNavigate={setCurrentView}
         onSwitchGoogleAccount={handleSwitchGoogleAccount}
+        theme={theme}
+        onToggleTheme={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')}
       />
 
       {/* Main View Area */}

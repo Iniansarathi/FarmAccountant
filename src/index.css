@@ -79,3 +79,103 @@ html, body, #root {
 .soft-pulse {
   animation: soft-pulse 2s infinite ease-in-out;
 }
+
+/* Dark Mode Overrides */
+.dark body,
+.dark #root,
+.dark .bg-slate-50 {
+  background-color: #0b0f19 !important;
+  color: #f1f5f9 !important;
+}
+
+.dark .bg-white,
+.dark .glass-card,
+.dark [class*="bg-white"] {
+  background-color: #121826 !important;
+  color: #f8fafc !important;
+}
+
+.dark .text-slate-800,
+.dark .text-slate-700,
+.dark .text-slate-900,
+.dark .text-slate-850,
+.dark .text-slate-655,
+.dark h1, .dark h2, .dark h3, .dark h4 {
+  color: #f8fafc !important;
+}
+
+.dark .text-slate-600,
+.dark .text-slate-550,
+.dark .text-slate-500,
+.dark .text-slate-400 {
+  color: #94a3b8 !important;
+}
+
+.dark .border-slate-100,
+.dark .border-slate-200,
+.dark .border-slate-300,
+.dark .border-slate-250 {
+  border-color: #1f293d !important;
+}
+
+.dark select,
+.dark input,
+.dark textarea {
+  background-color: #172033 !important;
+  color: #f8fafc !important;
+  border-color: #1f293d !important;
+}
+
+.dark select:focus,
+.dark input:focus,
+.dark textarea:focus {
+  border-color: #10b981 !important;
+}
+
+.dark .bg-slate-50\/50 {
+  background-color: #121826 !important;
+}
+
+.dark .bg-slate-100 {
+  background-color: #1f293d !important;
+  color: #e2e8f0 !important;
+}
+
+.dark .hover\:bg-slate-50:hover {
+  background-color: #1f293d !important;
+}
+
+/* Accent & Card Adjustments */
+.dark .bg-emerald-50 {
+  background-color: rgba(16, 185, 129, 0.15) !important;
+  color: #34d399 !important;
+}
+.dark .text-emerald-800 {
+  color: #34d399 !important;
+}
+
+.dark .bg-amber-50\/30 {
+  background-color: rgba(245, 158, 11, 0.1) !important;
+}
+.dark .bg-emerald-50\/30 {
+  background-color: rgba(16, 185, 129, 0.08) !important;
+}
+.dark .bg-sky-50\/30 {
+  background-color: rgba(14, 165, 233, 0.1) !important;
+}
+
+.dark .text-amber-850 {
+  color: #fbbf24 !important;
+}
+.dark .text-sky-850 {
+  color: #38bdf8 !important;
+}
+
+.dark .border-dashed {
+  border-color: #334155 !important;
+}
+
+.dark select option {
+  background-color: #121826 !important;
+  color: #f8fafc !important;
+}

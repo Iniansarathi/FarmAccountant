@@ -68,12 +68,20 @@ export default function CropDetails({
           </span>
         );
       case 'sowing_labor':
-        const wagePerWorker = exp.details.costPerLaborer
-          ? exp.details.costPerLaborer
-          : exp.details.numLaborers && exp.details.laborCost
-            ? (exp.details.laborCost / exp.details.numLaborers).toFixed(2)
-            : '0';
-        return `${exp.details.numLaborers || 0} ${t('common.laborers_label')} • ${t('common.wages_label')}: ${t('dashboard.currency_symbol')}${exp.details.laborCost || 0} (${t('dashboard.currency_symbol')}${wagePerWorker}/${t('common.laborers_label')})`;
+        const laborParts = [];
+        if (Number(exp.details.laborCost) > 0 || Number(exp.details.numLaborers) > 0) {
+          const wagePerWorker = exp.details.costPerLaborer
+            ? exp.details.costPerLaborer
+            : exp.details.numLaborers && exp.details.laborCost
+              ? (exp.details.laborCost / exp.details.numLaborers).toFixed(0)
+              : '0';
+          laborParts.push(`${exp.details.numLaborers || 0} ${t('common.laborers_label')} (Wages: ${t('dashboard.currency_symbol')}${exp.details.laborCost || 0} @ ${t('dashboard.currency_symbol')}${wagePerWorker}/each)`);
+        }
+        if (Number(exp.details.machineryCost) > 0) {
+          const machName = exp.details.machineryType || 'Machinery';
+          laborParts.push(`${machName}: ${t('dashboard.currency_symbol')}${exp.details.machineryCost}`);
+        }
+        return laborParts.length > 0 ? laborParts.join(' • ') : 'Sowing details';
       case 'pesticides':
         const sprayUnitCost = exp.details.tanks && exp.details.pricePerTank
           ? (exp.details.pricePerTank / exp.details.tanks).toFixed(2)

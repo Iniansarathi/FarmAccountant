@@ -9,7 +9,9 @@ export default function Sidebar({
   syncStatus, 
   onLogout, 
   onNavigate,
-  onSwitchGoogleAccount
+  onSwitchGoogleAccount,
+  theme,
+  onToggleTheme
 }) {
   const { t } = useTranslation();
 
@@ -131,6 +133,20 @@ export default function Sidebar({
             className="w-full flex items-center gap-2.5 px-3 py-2 text-slate-655 hover:bg-emerald-50/50 hover:text-emerald-700 text-slate-700 font-semibold text-xs rounded-lg transition-all cursor-pointer text-left"
           >
             <RefreshCw size={15} /> {t('sidebar.nav_analytics')}
+          </button>
+        </div>
+
+        {/* Theme Toggle Section */}
+        <div className="px-4 py-3 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between text-xs font-semibold text-slate-700">
+          <div className="flex items-center gap-1.5">
+            <span>{theme === 'dark' ? '🌙' : '☀️'}</span>
+            <span>Theme Mode</span>
+          </div>
+          <button
+            onClick={onToggleTheme}
+            className="px-2.5 py-1 rounded-full border border-slate-200 bg-white hover:bg-slate-50 text-[10px] font-bold hover-scale hover-scale-active transition-all cursor-pointer shadow-sm flex items-center gap-1 text-slate-600"
+          >
+            <span>{theme === 'dark' ? 'Light' : 'Dark'}</span>
           </button>
         </div>
 

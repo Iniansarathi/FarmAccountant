@@ -24,6 +24,10 @@ export default function ExpenseForm({ crops, defaultCropId, onSave, onCancel, ed
   const [sowingLaborers, setSowingLaborers] = useState(editingExpense?.stage === 'sowing_labor' ? (editingExpense.details.numLaborers?.toString() || '') : '');
   const [sowingCost, setSowingCost] = useState(editingExpense?.stage === 'sowing_labor' ? (editingExpense.details.laborCost?.toString() || '') : '');
   const [sowingCostPerLaborer, setSowingCostPerLaborer] = useState(editingExpense?.stage === 'sowing_labor' ? (editingExpense.details.costPerLaborer?.toString() || '') : '');
+  const [includeSowingLabor, setIncludeSowingLabor] = useState(editingExpense?.stage === 'sowing_labor' ? (Number(editingExpense.details.laborCost) > 0 || !editingExpense.details.machineryCost) : true);
+  const [includeSowingMachinery, setIncludeSowingMachinery] = useState(editingExpense?.stage === 'sowing_labor' ? (Number(editingExpense.details.machineryCost) > 0) : false);
+  const [sowingMachineryCost, setSowingMachineryCost] = useState(editingExpense?.stage === 'sowing_labor' ? (editingExpense.details.machineryCost?.toString() || '') : '');
+  const [sowingMachineryType, setSowingMachineryType] = useState(editingExpense?.stage === 'sowing_labor' ? (editingExpense.details.machineryType || '') : '');
 
   const [pestName, setPestName] = useState(editingExpense?.stage === 'pesticides' ? (editingExpense.details.chemicalName || '') : '');
   const [pestQty, setPestQty] = useState(editingExpense?.stage === 'pesticides' ? (editingExpense.details.quantity?.toString() || '') : '');
@@ -96,6 +100,16 @@ export default function ExpenseForm({ crops, defaultCropId, onSave, onCancel, ed
       setSowingCostPerLaborer((tVal / q).toFixed(2));
     }
   };
+
+  useEffect(() => {
+    if (stage === 'sowing_labor') {
+      const labor = includeSowingLabor ? (parseFloat(sowingCost) || 0) : 0;
+      const machine = includeSowingMachinery ? (parseFloat(sowingMachineryCost) || 0) : 0;
+      if (labor > 0 || machine > 0) {
+        setCost((labor + machine).toString());
+      }
+    }
+  }, [sowingCost, sowingMachineryCost, stage, includeSowingLabor, includeSowingMachinery]);
 
   const handlePestQtyChange = (val) => {
     setPestQty(val);
@@ -200,7 +214,13 @@ export default function ExpenseForm({ crops, defaultCropId, onSave, onCancel, ed
         };
         break;
       case 'sowing_labor':
-        details = { numLaborers: Number(sowingLaborers), laborCost: Number(sowingCost), costPerLaborer: Number(sowingCostPerLaborer) || 0 };
+        details = { 
+          numLaborers: includeSowingLabor ? (Number(sowingLaborers) || 0) : 0, 
+          laborCost: includeSowingLabor ? (Number(sowingCost) || 0) : 0, 
+          costPerLaborer: includeSowingLabor ? (Number(sowingCostPerLaborer) || 0) : 0,
+          machineryCost: includeSowingMachinery ? (Number(sowingMachineryCost) || 0) : 0,
+          machineryType: includeSowingMachinery ? sowingMachineryType : ''
+        };
         break;
       case 'pesticides':
         details = { 
@@ -416,41 +436,106 @@ export default function ExpenseForm({ crops, defaultCropId, onSave, onCancel, ed
               </div>
             )}
 
-            {/* 3. Sowing Labor */}
+            {/* 3. Sowing Labor & Machinery */}
             {stage === 'sowing_labor' && (
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600 h-8 flex items-end mb-1">{t('expense_form.details.num_laborers')}</label>
+              <div className="space-y-4">
+                {/* Checkboxes to select options */}
+                <div className="flex gap-4 pb-2 border-b border-slate-100">
+                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
                     <input
-                      type="number"
-                      value={sowingLaborers}
-                      onChange={(e) => handleSowingLaborersChange(e.target.value)}
-                      placeholder="e.g. 8"
-                      className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm"
+                      type="checkbox"
+                      checked={includeSowingLabor}
+                      onChange={(e) => {
+                        setIncludeSowingLabor(e.target.checked);
+                        if (!e.target.checked && !includeSowingMachinery) {
+                          setIncludeSowingMachinery(true); // make sure at least one is checked
+                        }
+                      }}
+                      className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer"
                     />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600 h-8 flex items-end mb-1">{t('expense_form.details.cost_per_laborer')}</label>
+                    <span>Sowing Labor</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-xs font-semibold text-slate-700 cursor-pointer">
                     <input
-                      type="number"
-                      value={sowingCostPerLaborer}
-                      onChange={(e) => handleSowingCostPerLaborerChange(e.target.value)}
-                      placeholder="e.g. 300"
-                      className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm"
+                      type="checkbox"
+                      checked={includeSowingMachinery}
+                      onChange={(e) => {
+                        setIncludeSowingMachinery(e.target.checked);
+                        if (!e.target.checked && !includeSowingLabor) {
+                          setIncludeSowingLabor(true); // make sure at least one is checked
+                        }
+                      }}
+                      className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer"
                     />
+                    <span>Sowing Machinery</span>
+                  </label>
+                </div>
+
+                {/* Sowing Labor Details */}
+                {includeSowingLabor && (
+                  <div className="space-y-3 p-3 bg-slate-50/50 rounded-xl border border-slate-100">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Labor Details</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[11px] font-medium text-slate-600 mb-1">{t('expense_form.details.num_laborers')}</label>
+                        <input
+                          type="number"
+                          value={sowingLaborers}
+                          onChange={(e) => handleSowingLaborersChange(e.target.value)}
+                          placeholder="e.g. 8"
+                          className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-medium text-slate-655 mb-1">{t('expense_form.details.cost_per_laborer')}</label>
+                        <input
+                          type="number"
+                          value={sowingCostPerLaborer}
+                          onChange={(e) => handleSowingCostPerLaborerChange(e.target.value)}
+                          placeholder="e.g. 300"
+                          className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-medium text-slate-655 mb-1">{t('expense_form.details.labor_cost')}</label>
+                      <input
+                        type="number"
+                        value={sowingCost}
+                        onChange={(e) => handleSowingCostChange(e.target.value)}
+                        placeholder="e.g. 2400"
+                        className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm font-semibold"
+                      />
+                    </div>
                   </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">{t('expense_form.details.labor_cost')}</label>
-                  <input
-                    type="number"
-                    value={sowingCost}
-                    onChange={(e) => handleSowingCostChange(e.target.value)}
-                    placeholder="e.g. 2400"
-                    className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm font-semibold"
-                  />
-                </div>
+                )}
+
+                {/* Sowing Machinery Details */}
+                {includeSowingMachinery && (
+                  <div className="space-y-3 p-3 bg-slate-50/50 rounded-xl border border-slate-100">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Machinery Details</p>
+                    <div>
+                      <label className="block text-[11px] font-medium text-slate-600 mb-1">Machinery Type / Rental Notes</label>
+                      <input
+                        type="text"
+                        value={sowingMachineryType}
+                        onChange={(e) => setSowingMachineryType(e.target.value)}
+                        placeholder="e.g. Tractor seed drill rental"
+                        className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-medium text-slate-600 mb-1">Machinery Cost (₹)</label>
+                      <input
+                        type="number"
+                        value={sowingMachineryCost}
+                        onChange={(e) => setSowingMachineryCost(e.target.value)}
+                        placeholder="e.g. 1500"
+                        className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm font-semibold"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
