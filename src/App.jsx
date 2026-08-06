@@ -399,7 +399,7 @@ export default function App() {
   }
 
   return (
-    <div ref={scrollContainerRef} className="flex flex-col h-screen bg-slate-50 w-full max-w-lg md:max-w-6xl mx-auto md:border-x md:border-slate-200 md:shadow-md relative overflow-y-auto scrollbar-none transition-all duration-300">
+    <div ref={scrollContainerRef} className="flex flex-col h-screen bg-slate-50 w-full max-w-lg md:max-w-6xl mx-auto md:border-x md:border-slate-200 md:shadow-md relative overflow-y-auto overflow-x-hidden scrollbar-none transition-all duration-300">
       
       {/* Top Header */}
       <Header 
@@ -412,7 +412,7 @@ export default function App() {
       />
 
       {/* Horizontal Sub-Navbar (Navigation below the top nav bar) */}
-      <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-100 px-4 py-2 sm:px-6 flex items-center justify-center gap-1 sm:gap-2 overflow-x-auto scrollbar-none shrink-0 shadow-sm">
+      <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-100 px-4 py-2 sm:px-6 flex items-center justify-start sm:justify-center gap-1 sm:gap-2 overflow-x-auto scrollbar-none shrink-0 shadow-sm">
         <button
           onClick={() => { setSelectedCropId(null); setCurrentView('dashboard'); }}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${

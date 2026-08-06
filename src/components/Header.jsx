@@ -12,57 +12,57 @@ export default function Header({ user, syncStatus, onTriggerSync, onOpenSidebar,
 
   const languages = [
     { code: 'en', name: 'English' },
-    { code: 'hi', name: 'हिंदी (Hindi)' },
-    { code: 'te', name: 'తెలుగు (Telugu)' },
-    { code: 'ta', name: 'தமிழ் (Tamil)' },
-    { code: 'kn', name: 'ಕನ್ನಡ (Kannada)' },
-    { code: 'mr', name: 'मराठी (Marathi)' }
+    { code: 'hi', name: 'हिंदी' },
+    { code: 'te', name: 'తెలుగు' },
+    { code: 'ta', name: 'தமிழ்' },
+    { code: 'kn', name: 'ಕನ್ನಡ' },
+    { code: 'mr', name: 'मराठी' }
   ];
 
   const getSyncBadge = () => {
     switch (syncStatus) {
       case 'synced':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+          <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200" title={t('header.synced')}>
             <Cloud size={13} className="text-emerald-500" />
-            <span className="hidden xs:inline">{t('header.synced')}</span>
+            <span className="hidden sm:inline">{t('header.synced')}</span>
           </span>
         );
       case 'syncing':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 soft-pulse cursor-wait">
+          <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200 soft-pulse cursor-wait" title={t('header.syncing')}>
             <RefreshCw size={13} className="animate-spin text-amber-500" />
-            <span className="hidden xs:inline">{t('header.syncing')}</span>
+            <span className="hidden sm:inline">{t('header.syncing')}</span>
           </span>
         );
       case 'unsaved':
         return (
           <button 
             onClick={onTriggerSync}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300 hover:bg-amber-200 hover-scale cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300 hover:bg-amber-200 hover-scale cursor-pointer"
             title="Click to sync manually"
           >
             <Cloud size={13} className="text-amber-600" />
-            <span>{t('header.unsaved')}</span>
+            <span className="hidden sm:inline">{t('header.unsaved')}</span>
           </button>
         );
       case 'error':
         return (
           <button 
             onClick={onTriggerSync}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 hover-scale cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 hover-scale cursor-pointer"
             title="Sync failed. Click to retry."
           >
             <CloudOff size={13} className="text-rose-500" />
-            <span>Error (Retry)</span>
+            <span className="hidden sm:inline">Error (Retry)</span>
           </button>
         );
       case 'local':
       default:
         return (
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
+          <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200" title={t('header.local_mode')}>
             <Smartphone size={13} className="text-slate-500" />
-            <span className="hidden xs:inline">{t('header.local_mode')}</span>
+            <span className="hidden sm:inline">{t('header.local_mode')}</span>
           </span>
         );
     }
@@ -102,11 +102,11 @@ export default function Header({ user, syncStatus, onTriggerSync, onOpenSidebar,
 
         {/* Language Selector Dropdown */}
         <div className="relative inline-flex items-center">
-          <Globe size={15} className="absolute left-2.5 text-slate-400 pointer-events-none" />
+          <Globe size={13} className="absolute left-2 text-slate-400 pointer-events-none" />
           <select
             value={i18n.resolvedLanguage || 'en'}
             onChange={handleLanguageChange}
-            className="pl-8 pr-2 py-1.5 rounded-lg border border-slate-200 text-sm font-medium bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all cursor-pointer shadow-sm appearance-none min-w-[85px] sm:min-w-[120px]"
+            className="pl-6 pr-1.5 py-1 rounded-lg border border-slate-200 text-xs font-semibold bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all cursor-pointer shadow-sm appearance-none max-w-[80px] sm:max-w-none min-w-[70px] sm:min-w-[110px]"
           >
             {languages.map((lang) => (
               <option key={lang.code} value={lang.code}>

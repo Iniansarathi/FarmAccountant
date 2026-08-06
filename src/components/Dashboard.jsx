@@ -15,10 +15,16 @@ export default function Dashboard({
   const harvestedCrops = data.crops.filter(c => c.status === 'harvested') || [];
   
   // Calculate stats
-  // Total expenses for all active crops
+  // Total expenses for all crops (active + harvested)
   const totalInvestment = data.expenses.reduce((sum, exp) => sum + (Number(exp.cost) || 0), 0);
   const totalRevenue = data.harvests.reduce((sum, harv) => sum + (Number(harv.revenue) || 0), 0);
-  const netProfit = totalRevenue - totalInvestment;
+  
+  // Realized investment (only concluded crop cycles)
+  const concludedCropsInvestment = data.expenses
+    .filter(exp => harvestedCrops.some(c => c.id === exp.cropId))
+    .reduce((sum, exp) => sum + (Number(exp.cost) || 0), 0);
+  
+  const netProfit = totalRevenue - concludedCropsInvestment;
 
   // Calculate expenses per active crop for dashboard list
   const getCropExpenses = (cropId) => {
