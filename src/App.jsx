@@ -242,15 +242,6 @@ export default function App() {
   };
 
   // Auth Operations
-  const handleAuthSuccess = (loggedUser) => {
-    setUser(loggedUser);
-    localStorage.setItem('farm_current_user', JSON.stringify(loggedUser));
-    if (loggedUser.type === 'google') {
-      setSyncStatus('synced');
-    } else {
-      setSyncStatus('local');
-    }
-  };
 
   const handleLogout = () => {
     clearAuthSession();
@@ -600,7 +591,7 @@ export default function App() {
 
   // If user is not authenticated, show login page
   if (!user) {
-    return <Login onAuthSuccess={handleAuthSuccess} />;
+    return <Login />;
   }
 
   return (
