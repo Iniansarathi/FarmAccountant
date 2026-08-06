@@ -66,14 +66,14 @@ export function initGoogleOAuth(onTokenReceived, onError) {
 }
 
 export function requestGoogleToken(forceConsent = false) {
-  if (tokenClient) {
-    const promptValue = forceConsent ? 'consent select_account' : 'select_account';
-    tokenClient.requestAccessToken({ prompt: promptValue });
-  } else {
-    // If running in sandbox where Google GSI fails to load or init, trigger mock login
-    console.warn("Google Identity Client not initialized. Triggering mock login.");
-    throw new Error("Google GIS client not initialized. Please try Mock Google login.");
+  if (!window.google || !window.google.accounts) {
+    throw new Error("google_blocked");
   }
+  if (!tokenClient) {
+    throw new Error("client_not_initialized");
+  }
+  const promptValue = forceConsent ? 'consent select_account' : 'select_account';
+  tokenClient.requestAccessToken({ prompt: promptValue });
 }
 
 export async function fetchGoogleUserInfo(accessToken) {

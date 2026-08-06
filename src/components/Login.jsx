@@ -51,7 +51,13 @@ export default function Login({ onAuthSuccess }) {
       requestGoogleToken(forceConsent);
     } catch (err) {
       console.error(err);
-      setErrorMsg("Google Sign-In could not be loaded. Please ensure you have configured your Client ID in the .env file (VITE_GOOGLE_CLIENT_ID) and that you are not offline.");
+      if (err.message === "google_blocked") {
+        setErrorMsg("Google login library is blocked by your browser (e.g. Brave Shields, Safari Content Blocker, or Ad-blocker). Please disable shields/ad-blocker for this website and refresh.");
+      } else if (err.message === "client_not_initialized") {
+        setErrorMsg("Google Sign-In is not initialized. Please ensure VITE_GOOGLE_CLIENT_ID is set correctly in Vercel settings and that you have redeployed the project.");
+      } else {
+        setErrorMsg("Google Sign-In could not be loaded. Please check your internet connection and refresh.");
+      }
     }
   };
 
