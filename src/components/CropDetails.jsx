@@ -433,12 +433,12 @@ export default function CropDetails({
       <div className="glass-card rounded-2xl p-5 border border-slate-200 shadow-sm text-left">
         <h3 className="font-display font-bold text-sm text-slate-800 flex items-center gap-1.5 mb-4">
           <PieIcon size={16} className="text-emerald-500" />
-          Expense Breakdown
+          {t('analytics.expense_breakdown')}
         </h3>
 
         {pieData.length === 0 ? (
           <div className="h-32 flex flex-col items-center justify-center border border-dashed border-slate-200 rounded-xl text-slate-400 text-xs italic">
-            No expenses logged for this cycle.
+            {t('crop_details.no_expenses')}
           </div>
         ) : (
           <div className="flex flex-col sm:flex-row items-center justify-around gap-6">
@@ -465,7 +465,7 @@ export default function CropDetails({
 
               {/* Total Spent Center Badge */}
               <div className="absolute flex flex-col items-center justify-center text-center pointer-events-none">
-                <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider leading-none">Total</span>
+                <span className="text-[8px] font-bold text-slate-400 uppercase tracking-wider leading-none">{t('crop_details.total_label')}</span>
                 <span className="text-xs font-extrabold text-slate-800 font-display mt-0.5 leading-none">
                   {formatCurrency(totalExpense)}
                 </span>

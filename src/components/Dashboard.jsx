@@ -42,7 +42,7 @@ export default function Dashboard({
     } else if (deferredPrompt) {
       onTriggerInstall();
     } else {
-      alert("To install FarmAccountant: \n\n• On Android/Chrome: Tap the 3 dots in the top-right corner of Chrome and select 'Add to Home screen' or 'Install app'.\n• On Desktop Chrome/Edge: Click the install icon in the address bar at the top-right.");
+      alert(t('pwa.manual_instructions'));
     }
   };
 
@@ -67,9 +67,9 @@ export default function Dashboard({
           <div className="flex items-start gap-3">
             <span className="text-2xl shrink-0">📲</span>
             <div>
-              <h4 className="font-bold text-slate-800 text-sm mb-0.5">Install farmaccountant Shortcut</h4>
+              <h4 className="font-bold text-slate-800 text-sm mb-0.5">{t('pwa.title')}</h4>
               <p className="text-xs text-slate-500 leading-relaxed">
-                Add this app to your Home Screen for a faster, full-screen ledger experience and convenient offline bookkeeping.
+                {t('pwa.desc')}
               </p>
             </div>
           </div>
@@ -77,7 +77,7 @@ export default function Dashboard({
             onClick={handleInstallClick}
             className="shrink-0 px-4 py-2 bg-[#0C9D61] hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer hover-scale hover-scale-active text-center"
           >
-            Install App
+            {t('pwa.btn')}
           </button>
         </div>
       )}
@@ -112,11 +112,11 @@ export default function Dashboard({
           <p className="text-emerald-100 text-xs font-semibold tracking-wider uppercase">{t('app_subtitle')}</p>
           <h2 className="font-display font-bold text-2xl mt-1 tracking-tight">
             {activeCrops.length > 0 
-              ? `Tracking ${activeCrops.length} Active Crop Cycles` 
-              : "Welcome to farmaccountant"}
+              ? t('common.tracking_crops', { count: activeCrops.length }) 
+              : t('common.welcome_title')}
           </h2>
           <p className="text-emerald-50 text-xs mt-2 max-w-md">
-            Manage your field operations, input investments, and harvest sales in one secure, regional language platform.
+            {t('common.app_desc')}
           </p>
         </div>
       </div>

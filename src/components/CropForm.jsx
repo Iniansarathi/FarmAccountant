@@ -127,7 +127,7 @@ export default function CropForm({ onSave, onCancel, editingCrop }) {
           {/* Harvest Type Selection */}
           <div>
             <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
-              Harvest Scheme *
+              {t('crop_form.harvest_scheme')}
             </label>
             <div className="space-y-2">
               <label className={`flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer ${
@@ -142,8 +142,8 @@ export default function CropForm({ onSave, onCancel, editingCrop }) {
                   className="mt-1 text-[#0C9D61] focus:ring-emerald-500"
                 />
                 <div className="text-xs">
-                  <span className="block font-bold text-slate-700">One-Time Harvest</span>
-                  <span className="block text-slate-400 font-semibold mt-0.5">Crop cycle automatically concludes after logging the first harvest (e.g. Groundnut, Paddy).</span>
+                  <span className="block font-bold text-slate-700">{t('crop_form.scheme_single')}</span>
+                  <span className="block text-slate-400 font-semibold mt-0.5">{t('crop_form.scheme_single_desc')}</span>
                 </div>
               </label>
 
@@ -159,8 +159,8 @@ export default function CropForm({ onSave, onCancel, editingCrop }) {
                   className="mt-1 text-[#0C9D61] focus:ring-emerald-500"
                 />
                 <div className="text-xs">
-                  <span className="block font-bold text-slate-700">Multiple Harvests</span>
-                  <span className="block text-slate-400 font-semibold mt-0.5">Harvest repeatedly; the cycle stays active until you manually conclude it (e.g. Banana, Tomato).</span>
+                  <span className="block font-bold text-slate-700">{t('crop_form.scheme_multiple')}</span>
+                  <span className="block text-slate-400 font-semibold mt-0.5">{t('crop_form.scheme_multiple_desc')}</span>
                 </div>
               </label>
 
@@ -176,8 +176,8 @@ export default function CropForm({ onSave, onCancel, editingCrop }) {
                   className="mt-1 text-[#0C9D61] focus:ring-emerald-500"
                 />
                 <div className="text-xs">
-                  <span className="block font-bold text-slate-700">Long-Term Continuous</span>
-                  <span className="block text-slate-400 font-semibold mt-0.5">Runs continuously for years (e.g. Coconut, Jasmine). Maintenance cost and yield are filtered by year.</span>
+                  <span className="block font-bold text-slate-700">{t('crop_form.scheme_longterm')}</span>
+                  <span className="block text-slate-400 font-semibold mt-0.5">{t('crop_form.scheme_longterm_desc')}</span>
                 </div>
               </label>
             </div>

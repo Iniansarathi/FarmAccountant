@@ -68,16 +68,16 @@ export default function HarvestForm({ crops, defaultCropId, onSave, onCancel, ed
 
   const getDisabledReason = () => {
     if (!editingHarvest && activeCrops.length === 0) {
-      return "You do not have any active Crop Cycles. Please go to the Crops tab on the bottom menu to register a new crop cycle first.";
+      return t('harvest_form.warn_no_active');
     }
     if (!cropId) {
-      return "Please select a Crop Cycle from the dropdown above to enable saving.";
+      return t('harvest_form.warn_select_crop');
     }
     if (!yieldQty || Number(yieldQty) <= 0) {
-      return "Please enter a valid Harvest Yield Quantity to enable saving.";
+      return t('harvest_form.warn_invalid_yield');
     }
     if (!revenue || Number(revenue) <= 0) {
-      return "Please enter a valid Total Revenue amount to enable saving.";
+      return t('harvest_form.warn_invalid_revenue');
     }
     return null;
   };
@@ -126,24 +126,24 @@ export default function HarvestForm({ crops, defaultCropId, onSave, onCancel, ed
             </select>
             {activeCrops.length === 0 && (
               <p className="text-xs text-rose-500 mt-1 font-semibold">
-                No active crops found. Please start a crop cycle first!
+                {t('harvest_form.warn_no_active')}
               </p>
             )}
 
             {selectedCrop && (
               <div className="mt-2.5 p-3 rounded-xl border border-slate-100 bg-slate-50/50 space-y-0.5">
-                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Harvest Scheme Info</span>
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">{t('harvest_form.scheme_info_title')}</span>
                 {selectedHarvestType === 'single' ? (
                   <p className="text-[11px] text-amber-800 font-medium leading-relaxed">
-                    🚜 <strong>One-Time Harvest:</strong> Saving this entry will automatically mark this crop cycle as completed.
+                    🚜 {t('harvest_form.scheme_info_single')}
                   </p>
                 ) : selectedHarvestType === 'multiple' ? (
                   <p className="text-[11px] text-emerald-800 font-medium leading-relaxed">
-                    🔁 <strong>Multiple Harvests:</strong> This crop supports multiple harvests. The cycle remains active.
+                    🔁 {t('harvest_form.scheme_info_multiple')}
                   </p>
                 ) : (
                   <p className="text-[11px] text-emerald-800 font-medium leading-relaxed">
-                    🌳 <strong>Long-Term Continuous:</strong> Stays active for years. Costs and yields are filtered by year.
+                    🌳 {t('harvest_form.scheme_info_longterm')}
                   </p>
                 )}
               </div>

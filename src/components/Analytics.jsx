@@ -77,7 +77,7 @@ export default function Analytics({ data }) {
           <h2 className="font-display font-extrabold text-xl text-slate-800 tracking-tight m-0">
             {t('analytics.title')}
           </h2>
-          <p className="text-xs text-slate-400 mt-1">Select a crop cycle to filter your expense and profit distribution.</p>
+          <p className="text-xs text-slate-400 mt-1">{t('analytics.select_desc')}</p>
         </div>
         
         {/* Selector */}
@@ -88,7 +88,7 @@ export default function Analytics({ data }) {
             onChange={(e) => setFilterCropId(e.target.value)}
             className="w-full sm:w-auto pl-8 pr-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-sm cursor-pointer"
           >
-            <option value="all">All Crops (Combined)</option>
+            <option value="all">{t('analytics.all_combined')}</option>
             {crops.map(c => (
               <option key={c.id} value={c.id}>{c.cropName} ({c.fieldAlias})</option>
             ))}

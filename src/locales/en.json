@@ -57,7 +57,14 @@
     "sowing_date": "Sowing Date",
     "btn_save": "Start Cycle",
     "btn_cancel": "Cancel",
-    "validation_error": "Please fill in all required fields."
+    "validation_error": "Please fill in all required fields.",
+    "harvest_scheme": "Harvest Scheme *",
+    "scheme_single": "One-Time Harvest",
+    "scheme_single_desc": "Crop cycle automatically concludes after logging the first harvest (e.g. Groundnut, Paddy).",
+    "scheme_multiple": "Multiple Harvests",
+    "scheme_multiple_desc": "Harvest repeatedly; the cycle stays active until you manually conclude it (e.g. Banana, Tomato).",
+    "scheme_longterm": "Long-Term Continuous",
+    "scheme_longterm_desc": "Runs continuously for years (e.g. Coconut, Jasmine). Maintenance cost and yield are filtered by year."
   },
   "expense_form": {
     "title": "Log Expense / Activity",
@@ -113,7 +120,15 @@
     "price_per_unit": "Sale Price per Unit (₹)",
     "date": "Harvest Date",
     "btn_submit": "Log Harvest",
-    "btn_cancel": "Cancel"
+    "btn_cancel": "Cancel",
+    "scheme_info_title": "Harvest Scheme Info",
+    "scheme_info_single": "One-Time Harvest: Saving this entry will automatically mark this crop cycle as completed.",
+    "scheme_info_multiple": "Multiple Harvests: This crop supports multiple harvests. The cycle remains active.",
+    "scheme_info_longterm": "Long-Term Continuous: Stays active for years. Costs and yields are filtered by year.",
+    "warn_no_active": "You do not have any active Crop Cycles. Please go to the Crops tab on the bottom menu to register a new crop cycle first.",
+    "warn_select_crop": "Please select a Crop Cycle from the dropdown above to enable saving.",
+    "warn_invalid_yield": "Please enter a valid Harvest Yield Quantity to enable saving.",
+    "warn_invalid_revenue": "Please enter a valid Total Revenue amount to enable saving."
   },
   "analytics": {
     "title": "Financial Insights",
@@ -124,7 +139,9 @@
     "investment": "Investment",
     "revenue": "Revenue",
     "pie_empty": "Log expenses to see breakdown",
-    "bar_empty": "Harvest data required for profit comparison"
+    "bar_empty": "Harvest data required for profit comparison",
+    "select_desc": "Select a crop cycle to filter your expense and profit distribution.",
+    "all_combined": "All Crops (Combined)"
   },
   "common": {
     "edit": "Edit",
@@ -171,5 +188,15 @@
     "nav_home": "Dashboard Home",
     "nav_crop": "Start Crop Cycle",
     "nav_analytics": "Financial Analytics"
+  },
+  "pwa": {
+    "title": "Install farmaccountant Shortcut",
+    "desc": "Add this app to your Home Screen for a faster, full-screen ledger experience and convenient offline bookkeeping.",
+    "btn": "Install App",
+    "manual_instructions": "To install FarmAccountant:\n\n• On Android/Chrome: Tap the 3 dots in the top-right corner of Chrome and select 'Add to Home screen' or 'Install app'.\n• On Desktop Chrome/Edge: Click the install icon in the address bar at the top-right."
+  },
+  "crop_details": {
+    "no_expenses": "No expenses logged for this cycle.",
+    "total_label": "Total"
   }
 }
