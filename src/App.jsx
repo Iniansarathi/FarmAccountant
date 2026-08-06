@@ -84,8 +84,10 @@ export default function App() {
         } else if (parsedUser.isMock) {
           setSyncStatus('synced');
         } else {
-          // Token expired, set sync status to unsaved/local until they authenticate again
-          setSyncStatus('unsaved');
+          // Token expired, clear expired user session so they re-authenticate and sync fresh
+          setUser(null);
+          localStorage.removeItem('farm_current_user');
+          setSyncStatus('local');
         }
       } else {
         setSyncStatus('local');
