@@ -255,7 +255,6 @@ export default function App() {
               // Mark as registered so next login bypasses onboarding and logs in normally
               localStorage.setItem(`farm_registered_${user.email}`, 'true');
               handleLogout();
-              setOnboardingState('idle');
             }, 2000);
           }, delay);
         } else {
@@ -284,13 +283,11 @@ export default function App() {
               // Play success overlay for 2 seconds then logout
               setTimeout(() => {
                 handleLogout();
-                setOnboardingState('idle');
               }, 2000);
             }, delay);
           } else {
             // Existing user: direct logout callback to prompt GIS consent checkboxes again
             setSyncStatus('error');
-            setOnboardingState('idle');
             handleLogout();
           }
         } else {
@@ -326,6 +323,7 @@ export default function App() {
     setData({ crops: [], expenses: [], harvests: [] });
     setGoogleToken(null);
     setFileId(null);
+    setOnboardingState('idle');
     localStorage.removeItem('farm_current_user');
     setCurrentView('dashboard');
   };
