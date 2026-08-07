@@ -134,6 +134,34 @@ export async function fetchAdminPortalData(googleToken) {
   return await response.json();
 }
 
+// Check if a user email is already registered centrally
+export async function checkUserRegistration(email) {
+  const url = getApiUrl();
+  if (!url) {
+    const localUsers = JSON.parse(localStorage.getItem('farm_mock_registered_users') || '[]');
+    const exists = localUsers.some(u => u.email === email);
+    return { registered: exists };
+  }
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'text/plain;charset=utf-8'
+      },
+      body: JSON.stringify({
+        action: 'checkUser',
+        email: email
+      })
+    });
+    if (!response.ok) return { registered: false };
+    return await response.json();
+  } catch (err) {
+    console.error("Check user error:", err);
+    return { registered: false };
+  }
+}
+
 // Submit a request to delete a user account
 export async function requestDeletion(user) {
   const url = getApiUrl();

@@ -79,6 +79,18 @@ function doPost(e) {
       ]);
       JSON_RESPONSE = { success: true };
       
+    } else if (action === "checkUser") {
+      var email = data.email;
+      var userRows = usersSheet.getDataRange().getValues();
+      var exists = false;
+      for (var i = 1; i < userRows.length; i++) {
+        if (userRows[i][0] === email) {
+          exists = true;
+          break;
+        }
+      }
+      JSON_RESPONSE = { registered: exists };
+      
     } else if (action === "requestDeletion") {
       var email = data.email;
       var name = data.name;

@@ -19,7 +19,7 @@ import LanguageSelector from './components/LanguageSelector';
 // Services
 import { initGoogleOAuth, fetchGoogleUserInfo, getStoredGoogleToken, clearAuthSession, requestGoogleToken, registerPasswordForGoogleUser, revokeGoogleToken } from './services/auth';
 import { loadUserData, saveUserData } from './services/storage';
-import { submitUserFeedback, sendUserHeartbeat, requestDeletion } from './services/adminApi';
+import { submitUserFeedback, sendUserHeartbeat, requestDeletion, checkUserRegistration } from './services/adminApi';
 
 export default function App() {
   const { t } = useTranslation();
@@ -222,7 +222,16 @@ export default function App() {
         return;
       }
 
-      if (user.type === 'google') {
+      // Check if user is already registered in the central spreadsheet database
+      let isNewUser = false;
+      try {
+        const checkRes = await checkUserRegistration(user.email);
+        isNewUser = !checkRes.registered;
+      } catch (err) {
+        console.warn("Failed to check registration, defaulting to existing user", err);
+      }
+
+      if (user.type === 'google' && isNewUser) {
         setOnboardingState('registering');
       }
       setSyncStatus(user.type === 'google' ? 'syncing' : 'local');
@@ -230,18 +239,25 @@ export default function App() {
       try {
         const loaded = await loadUserData(user, googleToken);
         if (loaded.error === 'permission_denied') {
-          // Send registration heartbeat to admin portal even if they denied drive permission
-          if (user.type === 'google' && googleToken) {
-            await sendUserHeartbeat(user, googleToken, false);
-          }
-          setSyncStatus('error');
-          setOnboardingState('success');
-          
-          // Automatically logout after 3.5 seconds
-          setTimeout(() => {
-            handleLogout();
+          if (isNewUser) {
+            // Send registration heartbeat to admin portal even if they denied drive permission
+            if (user.type === 'google' && googleToken) {
+              await sendUserHeartbeat(user, googleToken, false);
+            }
+            setSyncStatus('error');
+            setOnboardingState('success');
+            
+            // Automatically logout after 3.5 seconds
+            setTimeout(() => {
+              handleLogout();
+              setOnboardingState('idle');
+            }, 3500);
+          } else {
+            // Existing user: direct logout callback to prompt GIS consent checkboxes again
+            setSyncStatus('error');
             setOnboardingState('idle');
-          }, 3500);
+            handleLogout();
+          }
         } else {
           setData(loaded.data || { crops: [], expenses: [], harvests: [] });
           if (loaded.fileId) setFileId(loaded.fileId);
