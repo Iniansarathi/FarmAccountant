@@ -231,8 +231,16 @@ export default function App() {
       let localRegFlag = localStorage.getItem(`farm_registered_${user.email}`);
       let isNewUser = false;
       let apiChecked = false;
+      const isNewUserOnDevice = localRegFlag !== 'true';
 
-      if (localRegFlag !== 'true') {
+      if (user.type === 'google' && isNewUserOnDevice) {
+        if (active) setOnboardingState('checking');
+      }
+      if (active) setSyncStatus(user.type === 'google' ? 'syncing' : 'local');
+      
+      const startTime = Date.now();
+
+      if (isNewUserOnDevice) {
         // If not flagged locally, verify with central spreadsheet database
         try {
           const checkRes = await checkUserRegistration(user.email);
@@ -241,22 +249,15 @@ export default function App() {
             // Already registered centrally! Mark them locally to prevent future API calls
             localStorage.setItem(`farm_registered_${user.email}`, 'true');
             localRegFlag = 'true';
+            if (active) setOnboardingState('idle');
           } else if (checkRes && checkRes.registered === false) {
             isNewUser = true;
+            if (active) setOnboardingState('registering');
           }
         } catch (err) {
           console.warn("Failed to check registration centrally, defaulting to existing user check", err);
         }
       }
-
-      const isNewUserOnDevice = localRegFlag !== 'true';
-
-      if (user.type === 'google' && isNewUserOnDevice) {
-        if (active) setOnboardingState('registering');
-      }
-      if (active) setSyncStatus(user.type === 'google' ? 'syncing' : 'local');
-      
-      const startTime = Date.now();
 
       try {
         const loaded = await loadUserData(user, googleToken);
@@ -271,6 +272,7 @@ export default function App() {
           if (user.type === 'google' && googleToken) {
             await sendUserHeartbeat(user, googleToken, true);
           }
+          if (active) setOnboardingState('registering');
           
           // 2. Play "Registering..." for exactly 3 seconds
           const elapsedTime = Date.now() - startTime;
@@ -774,6 +776,15 @@ export default function App() {
     return <Login />;
   }
 
+  // If Google user is authenticated but token is not set yet, show initial loading screen (prevents home page flash)
+  if (user && user.type === 'google' && !googleToken) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-4 transition-colors">
+        <div className="w-12 h-12 border-4 border-[#0C9D61] border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
   // Onboarding registration / sync diagnosis overlay
   if (onboardingState !== 'idle') {
     return (
@@ -784,7 +795,22 @@ export default function App() {
 
         <div className="w-full max-w-md glass-card dark:bg-slate-900 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-6 text-center animate-scale-in">
           <div className="space-y-4">
-            {onboardingState === 'registering' ? (
+            {onboardingState === 'checking' ? (
+              <div className="py-6 flex flex-col items-center justify-center space-y-4 animate-pulse">
+                <div className="w-12 h-12 border-4 border-[#0C9D61] border-t-transparent rounded-full animate-spin"></div>
+                <div className="space-y-2">
+                  <h3 className="font-display font-extrabold text-base text-slate-800 dark:text-slate-100 tracking-tight leading-none">
+                    Checking Account...
+                  </h3>
+                  <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500">
+                    கணக்கு சரிபார்க்கப்படுகிறது... / खाता सत्यापित किया जा रहा है...
+                  </p>
+                  <p className="text-[11px] font-medium text-slate-500 dark:text-slate-450 leading-relaxed max-w-[280px] mx-auto">
+                    Retrieving your profile authentication and credentials from the secure ledger. Please wait.
+                  </p>
+                </div>
+              </div>
+            ) : onboardingState === 'registering' ? (
               <div className="py-6 flex flex-col items-center justify-center space-y-4">
                 <div className="w-12 h-12 border-4 border-[#0C9D61] border-t-transparent rounded-full animate-spin"></div>
                 <div className="space-y-2">
