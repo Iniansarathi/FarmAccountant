@@ -214,11 +214,16 @@ export default function App() {
   // Fetch/load user data when user changes
   useEffect(() => {
     if (!user) return;
+    if (user.type === 'google' && !googleToken) return;
     
+    let active = true;
+    let timer1 = null;
+    let timer2 = null;
+
     const fetchData = async () => {
       // For developer account, bypass onboarding
       if (user.email === 'iniansarathi2003@gmail.com') {
-        setSyncStatus('synced');
+        if (active) setSyncStatus('synced');
         return;
       }
 
@@ -247,14 +252,15 @@ export default function App() {
       const isNewUserOnDevice = localRegFlag !== 'true';
 
       if (user.type === 'google' && isNewUserOnDevice) {
-        setOnboardingState('registering');
+        if (active) setOnboardingState('registering');
       }
-      setSyncStatus(user.type === 'google' ? 'syncing' : 'local');
+      if (active) setSyncStatus(user.type === 'google' ? 'syncing' : 'local');
       
       const startTime = Date.now();
 
       try {
         const loaded = await loadUserData(user, googleToken);
+        if (!active) return;
         
         // Double check: if they successfully loaded their Drive file and it already existed, they are existing!
         const isActuallyNew = loaded.isNewFile === true || (apiChecked && isNewUser);
@@ -270,11 +276,13 @@ export default function App() {
           const elapsedTime = Date.now() - startTime;
           const delay = Math.max(0, 3000 - elapsedTime);
           
-          setTimeout(() => {
+          timer1 = setTimeout(() => {
+            if (!active) return;
             setOnboardingState('success');
             
             // 3. Play "Registration Successful!" for exactly 2 seconds, then logout
-            setTimeout(() => {
+            timer2 = setTimeout(() => {
+              if (!active) return;
               // Mark as registered so next login bypasses onboarding and logs in normally
               localStorage.setItem(`farm_registered_${user.email}`, 'true');
               handleLogout();
@@ -289,6 +297,7 @@ export default function App() {
           setOnboardingState('idle');
         }
       } catch (err) {
+        if (!active) return;
         console.error("Failed to fetch data:", err);
         
         if (err.message === 'permission_denied') {
@@ -305,11 +314,13 @@ export default function App() {
             const elapsedTime = Date.now() - startTime;
             const delay = Math.max(0, 3000 - elapsedTime);
             
-            setTimeout(() => {
+            timer1 = setTimeout(() => {
+              if (!active) return;
               setOnboardingState('success');
               
               // Play success overlay for 2 seconds then logout
-              setTimeout(() => {
+              timer2 = setTimeout(() => {
+                if (!active) return;
                 handleLogout();
               }, 2000);
             }, delay);
@@ -326,6 +337,12 @@ export default function App() {
     };
     
     fetchData();
+
+    return () => {
+      active = false;
+      if (timer1) clearTimeout(timer1);
+      if (timer2) clearTimeout(timer2);
+    };
   }, [user, googleToken]);
 
   // Handle data updates and synchronization
