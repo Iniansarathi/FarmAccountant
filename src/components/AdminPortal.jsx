@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Users, MessageSquare, Monitor, Calendar, Search, ArrowLeft, Image as ImageIcon, Trash2, LogOut } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Users, MessageSquare, Monitor, Calendar, Search, ArrowLeft, Image as ImageIcon, Trash2, LogOut, RefreshCw } from 'lucide-react';
 import { fetchAdminPortalData, approveDeletion } from '../services/adminApi';
 
 export default function AdminPortal({ googleToken, onBack, onLogout, theme, onToggleTheme }) {
@@ -11,31 +11,32 @@ export default function AdminPortal({ googleToken, onBack, onLogout, theme, onTo
   const [actionLoading, setActionLoading] = useState(null); // Track email being deleted
   const [selectedScreenshot, setSelectedScreenshot] = useState(null); // Lightbox image source
 
-  useEffect(() => {
-    const loadPortalData = async () => {
-      setLoading(true);
-      setError('');
-      try {
-        const result = await fetchAdminPortalData(googleToken);
-        // Ensure result structure is completely safe
-        if (result && result.error) {
-          setError(result.error);
-        } else {
-          setData({
-            users: result?.users || [],
-            feedbacks: result?.feedbacks || [],
-            deletionRequests: result?.deletionRequests || []
-          });
-        }
-      } catch (err) {
-        console.error(err);
-        setError("Access Denied or Connection Failed. Please ensure you are logged in using iniansarathi2003@gmail.com and your Apps Script Web App is deployed.");
-      } finally {
-        setLoading(false);
+  const loadPortalData = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const result = await fetchAdminPortalData(googleToken);
+      // Ensure result structure is completely safe
+      if (result && result.error) {
+        setError(result.error);
+      } else {
+        setData({
+          users: result?.users || [],
+          feedbacks: result?.feedbacks || [],
+          deletionRequests: result?.deletionRequests || []
+        });
       }
-    };
-    loadPortalData();
+    } catch (err) {
+      console.error(err);
+      setError("Access Denied or Connection Failed. Please ensure you are logged in using iniansarathi2003@gmail.com and your Apps Script Web App is deployed.");
+    } finally {
+      setLoading(false);
+    }
   }, [googleToken]);
+
+  useEffect(() => {
+    loadPortalData();
+  }, [googleToken, loadPortalData]);
 
   const filteredUsers = (data?.users || []).filter(u => 
     (u?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -127,6 +128,15 @@ export default function AdminPortal({ googleToken, onBack, onLogout, theme, onTo
               Simulated Sandbox Mode
             </span>
           )}
+          <button
+            onClick={loadPortalData}
+            disabled={loading}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-850 text-[10px] font-bold hover-scale hover-scale-active transition-all cursor-pointer shadow-sm disabled:opacity-55"
+            title="Refresh Data"
+          >
+            <RefreshCw size={11} className={loading ? "animate-spin" : ""} />
+            <span>Refresh</span>
+          </button>
           {onToggleTheme && (
             <button
               onClick={onToggleTheme}

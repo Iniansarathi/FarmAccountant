@@ -19,7 +19,7 @@ import LanguageSelector from './components/LanguageSelector';
 // Services
 import { initGoogleOAuth, fetchGoogleUserInfo, getStoredGoogleToken, clearAuthSession, requestGoogleToken, registerPasswordForGoogleUser, revokeGoogleToken } from './services/auth';
 import { loadUserData, saveUserData } from './services/storage';
-import { submitUserFeedback, sendUserHeartbeat, requestDeletion, checkUserRegistration } from './services/adminApi';
+import { submitUserFeedback, sendUserHeartbeat, requestDeletion } from './services/adminApi';
 
 export default function App() {
   const { t } = useTranslation();
@@ -222,24 +222,11 @@ export default function App() {
         return;
       }
 
-      // Check local cache first for instant bypass (avoids API checks for logged in users)
-      let isNewUser = false;
+      // Check if user has successfully synced on this device before
       const localRegFlag = localStorage.getItem(`farm_registered_${user.email}`);
-      
-      if (localRegFlag !== 'true') {
-        // If not flagged locally, verify with central spreadsheet database
-        try {
-          const checkRes = await checkUserRegistration(user.email);
-          // ONLY treat as new if backend explicitly returns registered: false
-          if (checkRes && checkRes.registered === false) {
-            isNewUser = true;
-          }
-        } catch (err) {
-          console.warn("Failed to check registration centrally, defaulting to existing user", err);
-        }
-      }
+      const isNewUserOnDevice = localRegFlag !== 'true';
 
-      if (user.type === 'google' && isNewUser) {
+      if (user.type === 'google' && isNewUserOnDevice) {
         setOnboardingState('registering');
       }
       setSyncStatus(user.type === 'google' ? 'syncing' : 'local');
@@ -247,7 +234,7 @@ export default function App() {
       try {
         const loaded = await loadUserData(user, googleToken);
         if (loaded.error === 'permission_denied') {
-          if (isNewUser) {
+          if (isNewUserOnDevice) {
             // Send registration heartbeat to admin portal even if they denied drive permission
             if (user.type === 'google' && googleToken) {
               await sendUserHeartbeat(user, googleToken, false);
