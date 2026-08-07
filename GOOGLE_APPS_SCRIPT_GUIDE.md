@@ -29,6 +29,7 @@ function doPost(e) {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var feedbackSheet = ss.getSheetByName("Feedback") || ss.insertSheet("Feedback");
     var usersSheet = ss.getSheetByName("Users") || ss.insertSheet("Users");
+    var deletionSheet = ss.getSheetByName("DeletionRequests") || ss.insertSheet("DeletionRequests");
     
     // Create headers if empty
     if (feedbackSheet.getLastRow() === 0) {
@@ -36,6 +37,9 @@ function doPost(e) {
     }
     if (usersSheet.getLastRow() === 0) {
       usersSheet.appendRow(["Email", "Name", "Picture", "LastLogin"]);
+    }
+    if (deletionSheet.getLastRow() === 0) {
+      deletionSheet.appendRow(["Email", "Name", "Timestamp"]);
     }
     
     if (action === "registerUser") {
@@ -71,6 +75,73 @@ function doPost(e) {
         data.screenshot || "",
         data.device || ""
       ]);
+      JSON_RESPONSE = { success: true };
+      
+    } else if (action === "requestDeletion") {
+      var email = data.email;
+      var name = data.name;
+      var timestamp = new Date().toISOString();
+      
+      var requestRows = deletionSheet.getDataRange().getValues();
+      var alreadyExists = false;
+      for (var i = 1; i < requestRows.length; i++) {
+        if (requestRows[i][0] === email) {
+          alreadyExists = true;
+          break;
+        }
+      }
+      
+      if (!alreadyExists) {
+        deletionSheet.appendRow([email, name, timestamp]);
+      }
+      JSON_RESPONSE = { success: true };
+      
+    } else if (action === "approveDeletion") {
+      var targetEmail = data.email;
+      var token = data.token;
+      
+      if (!token) {
+        return ContentService.createTextOutput(JSON.stringify({ error: "Missing authorization token" }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      
+      // Verify email via Google Token Info
+      var verifyUrl = "https://www.googleapis.com/oauth2/v3/userinfo";
+      var res = UrlFetchApp.fetch(verifyUrl, {
+        headers: { "Authorization": "Bearer " + token },
+        muteHttpExceptions: true
+      });
+      
+      if (res.getResponseCode() !== 200) {
+        return ContentService.createTextOutput(JSON.stringify({ error: "Invalid authentication session" }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      
+      var profile = JSON.parse(res.getContentText());
+      var email = profile.email;
+      
+      // Strict security check: gate access only to your email
+      if (email !== "iniansarathi2003@gmail.com") {
+        return ContentService.createTextOutput(JSON.stringify({ error: "Access Denied: Unauthorized admin profile" }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      
+      // Remove from Users list
+      var userRows = usersSheet.getDataRange().getValues();
+      for (var i = userRows.length - 1; i >= 1; i--) {
+        if (userRows[i][0] === targetEmail) {
+          usersSheet.deleteRow(i + 1);
+        }
+      }
+      
+      // Remove from DeletionRequests list
+      var requestRows = deletionSheet.getDataRange().getValues();
+      for (var i = requestRows.length - 1; i >= 1; i--) {
+        if (requestRows[i][0] === targetEmail) {
+          deletionSheet.deleteRow(i + 1);
+        }
+      }
+      
       JSON_RESPONSE = { success: true };
     }
     
@@ -130,6 +201,7 @@ function doGet(e) {
       var ss = SpreadsheetApp.getActiveSpreadsheet();
       var feedbackSheet = ss.getSheetByName("Feedback");
       var usersSheet = ss.getSheetByName("Users");
+      var deletionSheet = ss.getSheetByName("DeletionRequests");
       
       var feedbacks = [];
       if (feedbackSheet && feedbackSheet.getLastRow() > 1) {
@@ -159,10 +231,22 @@ function doGet(e) {
         }
       }
       
+      var deletionRequests = [];
+      if (deletionSheet && deletionSheet.getLastRow() > 1) {
+        var dData = deletionSheet.getRange(2, 1, deletionSheet.getLastRow() - 1, 3).getValues();
+        for (var i = 0; i < dData.length; i++) {
+          deletionRequests.push({
+            email: dData[i][0],
+            name: dData[i][1],
+            timestamp: dData[i][2]
+          });
+        }
+      }
+      
       // Sort newest feedback first
       feedbacks.reverse();
       
-      return ContentService.createTextOutput(JSON.stringify({ users: users, feedbacks: feedbacks }))
+      return ContentService.createTextOutput(JSON.stringify({ users: users, feedbacks: feedbacks, deletionRequests: deletionRequests }))
         .setMimeType(ContentService.MimeType.JSON);
     }
     
