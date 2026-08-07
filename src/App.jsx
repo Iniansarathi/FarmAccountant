@@ -19,7 +19,7 @@ import LanguageSelector from './components/LanguageSelector';
 // Services
 import { initGoogleOAuth, fetchGoogleUserInfo, getStoredGoogleToken, clearAuthSession, requestGoogleToken, registerPasswordForGoogleUser, revokeGoogleToken } from './services/auth';
 import { loadUserData, saveUserData } from './services/storage';
-import { submitUserFeedback, sendUserHeartbeat, requestDeletion } from './services/adminApi';
+import { submitUserFeedback, sendUserHeartbeat, requestDeletion, checkUserRegistration } from './services/adminApi';
 
 export default function App() {
   const { t } = useTranslation();
@@ -223,8 +223,26 @@ export default function App() {
       }
 
       // Check if user has successfully synced on this device before
-      const localRegFlag = localStorage.getItem(`farm_registered_${user.email}`);
-      const isNewUserOnDevice = localRegFlag !== 'true';
+      let localRegFlag = localStorage.getItem(`farm_registered_${user.email}`);
+      let isNewUser = false;
+
+      if (localRegFlag !== 'true') {
+        // If not flagged locally, verify with central spreadsheet database
+        try {
+          const checkRes = await checkUserRegistration(user.email);
+          if (checkRes && checkRes.registered === true) {
+            // Already registered centrally! Mark them locally to prevent future API calls
+            localStorage.setItem(`farm_registered_${user.email}`, 'true');
+            localRegFlag = 'true';
+          } else if (checkRes && checkRes.registered === false) {
+            isNewUser = true;
+          }
+        } catch (err) {
+          console.warn("Failed to check registration centrally, defaulting to existing user to prevent loops", err);
+        }
+      }
+
+      const isNewUserOnDevice = isNewUser && localRegFlag !== 'true';
 
       if (user.type === 'google' && isNewUserOnDevice) {
         setOnboardingState('registering');
@@ -236,7 +254,11 @@ export default function App() {
       try {
         const loaded = await loadUserData(user, googleToken);
         
-        if (isNewUserOnDevice) {
+        // Double check: if they successfully loaded their Drive file, they are DEFINITELY an existing user!
+        const fileExistsInDrive = loaded.fileId && loaded.fileId !== 'mock_file_id';
+        const actualNewUser = isNewUserOnDevice && !fileExistsInDrive;
+
+        if (actualNewUser) {
           // New User Registration Flow (even if permissions were granted successfully)
           // 1. Send registration heartbeat centrally
           if (user.type === 'google' && googleToken) {
@@ -262,13 +284,17 @@ export default function App() {
           setData(loaded.data || { crops: [], expenses: [], harvests: [] });
           if (loaded.fileId) setFileId(loaded.fileId);
           setSyncStatus(user.type === 'google' ? 'synced' : 'local');
+          localStorage.setItem(`farm_registered_${user.email}`, 'true'); // Flag existing user locally
           setOnboardingState('idle');
         }
       } catch (err) {
         console.error("Failed to fetch data:", err);
         
         if (err.message === 'permission_denied') {
-          if (isNewUserOnDevice) {
+          // Double check if this user is flagged as registered
+          const isRegistered = localStorage.getItem(`farm_registered_${user.email}`) === 'true';
+          
+          if (!isRegistered && isNewUserOnDevice) {
             // New user registration flow with permission denied
             if (user.type === 'google' && googleToken) {
               await sendUserHeartbeat(user, googleToken, false);
