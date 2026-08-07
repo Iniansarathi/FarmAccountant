@@ -235,38 +235,57 @@ export default function App() {
 
       try {
         const loaded = await loadUserData(user, googleToken);
-        setData(loaded.data || { crops: [], expenses: [], harvests: [] });
-        if (loaded.fileId) setFileId(loaded.fileId);
-        setSyncStatus(user.type === 'google' ? 'synced' : 'local');
         
-        // Google user central database heartbeat registration (with permission)
-        if (user.type === 'google' && googleToken) {
-          await sendUserHeartbeat(user, googleToken, true);
-          localStorage.setItem(`farm_registered_${user.email}`, 'true');
+        if (isNewUserOnDevice) {
+          // New User Registration Flow (even if permissions were granted successfully)
+          // 1. Send registration heartbeat centrally
+          if (user.type === 'google' && googleToken) {
+            await sendUserHeartbeat(user, googleToken, true);
+          }
+          
+          // 2. Play "Registering..." for exactly 3 seconds
+          const elapsedTime = Date.now() - startTime;
+          const delay = Math.max(0, 3000 - elapsedTime);
+          
+          setTimeout(() => {
+            setOnboardingState('success');
+            
+            // 3. Play "Registration Successful!" for exactly 2 seconds, then logout
+            setTimeout(() => {
+              // Mark as registered so next login bypasses onboarding and logs in normally
+              localStorage.setItem(`farm_registered_${user.email}`, 'true');
+              handleLogout();
+              setOnboardingState('idle');
+            }, 2000);
+          }, delay);
+        } else {
+          // Normal login for existing users
+          setData(loaded.data || { crops: [], expenses: [], harvests: [] });
+          if (loaded.fileId) setFileId(loaded.fileId);
+          setSyncStatus(user.type === 'google' ? 'synced' : 'local');
+          setOnboardingState('idle');
         }
-        setOnboardingState('idle');
       } catch (err) {
         console.error("Failed to fetch data:", err);
         
         if (err.message === 'permission_denied') {
           if (isNewUserOnDevice) {
-            // Guarantee "Registering..." spinner runs for at least 2.5 seconds to feel premium
-            const elapsedTime = Date.now() - startTime;
-            const delay = Math.max(0, 2500 - elapsedTime);
+            // New user registration flow with permission denied
+            if (user.type === 'google' && googleToken) {
+              await sendUserHeartbeat(user, googleToken, false);
+            }
             
-            setTimeout(async () => {
-              // Send registration heartbeat to admin portal even if they denied drive permission
-              if (user.type === 'google' && googleToken) {
-                await sendUserHeartbeat(user, googleToken, false);
-              }
-              setSyncStatus('error');
+            const elapsedTime = Date.now() - startTime;
+            const delay = Math.max(0, 3000 - elapsedTime);
+            
+            setTimeout(() => {
               setOnboardingState('success');
               
-              // Automatically logout after 2.5 more seconds (5 seconds total loader time)
+              // Play success overlay for 2 seconds then logout
               setTimeout(() => {
                 handleLogout();
                 setOnboardingState('idle');
-              }, 2550);
+              }, 2000);
             }, delay);
           } else {
             // Existing user: direct logout callback to prompt GIS consent checkboxes again
