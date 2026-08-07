@@ -222,13 +222,21 @@ export default function App() {
         return;
       }
 
-      // Check if user is already registered in the central spreadsheet database
+      // Check local cache first for instant bypass (avoids API checks for logged in users)
       let isNewUser = false;
-      try {
-        const checkRes = await checkUserRegistration(user.email);
-        isNewUser = !checkRes.registered;
-      } catch (err) {
-        console.warn("Failed to check registration, defaulting to existing user", err);
+      const localRegFlag = localStorage.getItem(`farm_registered_${user.email}`);
+      
+      if (localRegFlag !== 'true') {
+        // If not flagged locally, verify with central spreadsheet database
+        try {
+          const checkRes = await checkUserRegistration(user.email);
+          // ONLY treat as new if backend explicitly returns registered: false
+          if (checkRes && checkRes.registered === false) {
+            isNewUser = true;
+          }
+        } catch (err) {
+          console.warn("Failed to check registration centrally, defaulting to existing user", err);
+        }
       }
 
       if (user.type === 'google' && isNewUser) {
@@ -266,6 +274,7 @@ export default function App() {
           // Google user central database heartbeat registration (with permission)
           if (user.type === 'google' && googleToken) {
             await sendUserHeartbeat(user, googleToken, true);
+            localStorage.setItem(`farm_registered_${user.email}`, 'true');
           }
           setOnboardingState('idle');
         }
@@ -341,6 +350,7 @@ export default function App() {
         
         // 4. Clear local browser cache related to this account
         localStorage.removeItem(`farm_data_google_${user.email}`);
+        localStorage.removeItem(`farm_registered_${user.email}`);
         localStorage.removeItem('google_drive_file_id');
         
         alert("Account deleted, Google Drive backup file removed, and permissions revoked. You will now be logged out.");
