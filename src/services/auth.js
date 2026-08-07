@@ -111,6 +111,21 @@ export function clearAuthSession() {
   tokenExpiry = null;
 }
 
+export async function revokeGoogleToken(token) {
+  if (!token) return;
+  try {
+    await fetch(`https://oauth2.googleapis.com/revoke?token=${encodeURIComponent(token)}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      }
+    });
+    console.log("Successfully revoked Google OAuth access token.");
+  } catch (err) {
+    console.error("Failed to revoke Google access token:", err);
+  }
+}
+
 export function registerPasswordForGoogleUser(email, password) {
   const users = getLocalUsers();
   const existingIndex = users.findIndex(u => u.username.toLowerCase() === email.toLowerCase());

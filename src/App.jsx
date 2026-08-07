@@ -17,7 +17,7 @@ import AdminPortal from './components/AdminPortal';
 import LanguageSelector from './components/LanguageSelector';
 
 // Services
-import { initGoogleOAuth, fetchGoogleUserInfo, getStoredGoogleToken, clearAuthSession, requestGoogleToken, registerPasswordForGoogleUser } from './services/auth';
+import { initGoogleOAuth, fetchGoogleUserInfo, getStoredGoogleToken, clearAuthSession, requestGoogleToken, registerPasswordForGoogleUser, revokeGoogleToken } from './services/auth';
 import { loadUserData, saveUserData } from './services/storage';
 import { submitUserFeedback, sendUserHeartbeat, requestDeletion } from './services/adminApi';
 
@@ -257,21 +257,41 @@ export default function App() {
   const handleRequestDeleteAccount = async () => {
     if (!user) return;
     const confirmMessage = user.type === 'google'
-      ? "Are you sure you want to request account deletion? This will log you out, clear your local browser cache, and request the administrator to delete your registered profile. Once approved by the admin, you can start a brand new ledger registration next time."
+      ? "Are you sure you want to request account deletion? This will delete your ledger file from Google Drive, revoke app permissions, clear your browser cache, and send a deletion request to the administrator. This action is irreversible!"
       : "Are you sure you want to permanently delete your local account and all stored crop data? This action is irreversible!";
       
     if (!window.confirm(confirmMessage)) return;
 
     try {
       if (user.type === 'google') {
-        // Send deletion request to admin sheet
+        // 1. Delete backup database file from the user's personal Google Drive
+        if (fileId && googleToken) {
+          try {
+            await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
+              method: 'DELETE',
+              headers: {
+                'Authorization': `Bearer ${googleToken}`
+              }
+            });
+            console.log("Spreadsheet database file deleted successfully from Google Drive.");
+          } catch (err) {
+            console.error("Failed to delete Google Drive database backup file:", err);
+          }
+        }
+
+        // 2. Revoke the Google OAuth token so it forces the permissions/consent screen next time
+        if (googleToken) {
+          await revokeGoogleToken(googleToken);
+        }
+
+        // 3. Send the central deletion request to the Admin portal/Google Sheet
         await requestDeletion(user);
         
-        // Clear local browser cache
+        // 4. Clear local browser cache related to this account
         localStorage.removeItem(`farm_data_google_${user.email}`);
         localStorage.removeItem('google_drive_file_id');
         
-        alert("Account deletion request submitted successfully. You will now be logged out.");
+        alert("Account deleted, Google Drive backup file removed, and permissions revoked. You will now be logged out.");
       } else {
         // Local user: delete ledger immediately
         localStorage.removeItem(`farm_data_local_${user.username}`);
@@ -281,7 +301,7 @@ export default function App() {
       handleLogout();
     } catch (err) {
       console.error(err);
-      alert("Failed to submit deletion request: " + err.message);
+      alert("Failed to complete account deletion: " + err.message);
     }
   };
 
