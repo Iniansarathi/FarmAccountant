@@ -231,22 +231,43 @@ export default function App() {
       }
       setSyncStatus(user.type === 'google' ? 'syncing' : 'local');
       
+      const startTime = Date.now();
+
       try {
         const loaded = await loadUserData(user, googleToken);
-        if (loaded.error === 'permission_denied') {
+        setData(loaded.data || { crops: [], expenses: [], harvests: [] });
+        if (loaded.fileId) setFileId(loaded.fileId);
+        setSyncStatus(user.type === 'google' ? 'synced' : 'local');
+        
+        // Google user central database heartbeat registration (with permission)
+        if (user.type === 'google' && googleToken) {
+          await sendUserHeartbeat(user, googleToken, true);
+          localStorage.setItem(`farm_registered_${user.email}`, 'true');
+        }
+        setOnboardingState('idle');
+      } catch (err) {
+        console.error("Failed to fetch data:", err);
+        
+        if (err.message === 'permission_denied') {
           if (isNewUserOnDevice) {
-            // Send registration heartbeat to admin portal even if they denied drive permission
-            if (user.type === 'google' && googleToken) {
-              await sendUserHeartbeat(user, googleToken, false);
-            }
-            setSyncStatus('error');
-            setOnboardingState('success');
+            // Guarantee "Registering..." spinner runs for at least 2.5 seconds to feel premium
+            const elapsedTime = Date.now() - startTime;
+            const delay = Math.max(0, 2500 - elapsedTime);
             
-            // Automatically logout after 3.5 seconds
-            setTimeout(() => {
-              handleLogout();
-              setOnboardingState('idle');
-            }, 3500);
+            setTimeout(async () => {
+              // Send registration heartbeat to admin portal even if they denied drive permission
+              if (user.type === 'google' && googleToken) {
+                await sendUserHeartbeat(user, googleToken, false);
+              }
+              setSyncStatus('error');
+              setOnboardingState('success');
+              
+              // Automatically logout after 2.5 more seconds (5 seconds total loader time)
+              setTimeout(() => {
+                handleLogout();
+                setOnboardingState('idle');
+              }, 2550);
+            }, delay);
           } else {
             // Existing user: direct logout callback to prompt GIS consent checkboxes again
             setSyncStatus('error');
@@ -254,21 +275,9 @@ export default function App() {
             handleLogout();
           }
         } else {
-          setData(loaded.data || { crops: [], expenses: [], harvests: [] });
-          if (loaded.fileId) setFileId(loaded.fileId);
-          setSyncStatus(user.type === 'google' ? 'synced' : 'local');
-          
-          // Google user central database heartbeat registration (with permission)
-          if (user.type === 'google' && googleToken) {
-            await sendUserHeartbeat(user, googleToken, true);
-            localStorage.setItem(`farm_registered_${user.email}`, 'true');
-          }
+          setSyncStatus(user.type === 'google' ? 'error' : 'local');
           setOnboardingState('idle');
         }
-      } catch (err) {
-        console.error("Failed to fetch data:", err);
-        setSyncStatus(user.type === 'google' ? 'error' : 'local');
-        setOnboardingState('idle');
       }
     };
     
