@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Users, MessageSquare, Monitor, Calendar, Search, ArrowLeft, Image as ImageIcon, Trash2, LogOut } from 'lucide-react';
 import { fetchAdminPortalData, approveDeletion } from '../services/adminApi';
 
-export default function AdminPortal({ googleToken, onBack, onLogout }) {
+export default function AdminPortal({ googleToken, onBack, onLogout, theme, onToggleTheme }) {
   const [activeTab, setActiveTab] = useState('users'); // 'users', 'feedbacks', 'deletions'
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -17,7 +17,16 @@ export default function AdminPortal({ googleToken, onBack, onLogout }) {
       setError('');
       try {
         const result = await fetchAdminPortalData(googleToken);
-        setData(result);
+        // Ensure result structure is completely safe
+        if (result && result.error) {
+          setError(result.error);
+        } else {
+          setData({
+            users: result?.users || [],
+            feedbacks: result?.feedbacks || [],
+            deletionRequests: result?.deletionRequests || []
+          });
+        }
       } catch (err) {
         console.error(err);
         setError("Access Denied or Connection Failed. Please ensure you are logged in using iniansarathi2003@gmail.com and your Apps Script Web App is deployed.");
@@ -28,20 +37,20 @@ export default function AdminPortal({ googleToken, onBack, onLogout }) {
     loadPortalData();
   }, [googleToken]);
 
-  const filteredUsers = data.users.filter(u => 
-    u.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    u.email.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredUsers = (data?.users || []).filter(u => 
+    (u?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+    (u?.email || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const filteredFeedbacks = data.feedbacks.filter(f => 
-    f.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    f.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    f.message.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredFeedbacks = (data?.feedbacks || []).filter(f => 
+    (f?.name || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+    (f?.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (f?.message || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const filteredDeletions = (data.deletionRequests || []).filter(req => {
-    const email = typeof req === 'string' ? req : (req.email || '');
-    const name = typeof req === 'string' ? '' : (req.name || '');
+  const filteredDeletions = (data?.deletionRequests || []).filter(req => {
+    const email = typeof req === 'string' ? req : (req?.email || '');
+    const name = typeof req === 'string' ? '' : (req?.name || '');
     return email.toLowerCase().includes(searchQuery.toLowerCase()) || 
            name.toLowerCase().includes(searchQuery.toLowerCase());
   });
