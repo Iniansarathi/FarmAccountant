@@ -242,6 +242,38 @@ export default function App() {
         const loaded = await loadUserData(user, googleToken);
         if (!active) return;
         
+        if (loaded && loaded.error === 'permission_denied') {
+          // Check if they are registered centrally or if they have logged in before
+          const isRegistered = localStorage.getItem(`farm_registered_${user.email}`) === 'true';
+          
+          if (!isRegistered) {
+            // New user registration flow with permission denied
+            if (user.type === 'google' && googleToken) {
+              await sendUserHeartbeat(user, googleToken, false);
+            }
+            if (active) setOnboardingState('registering');
+            
+            const elapsedTime = Date.now() - startTime;
+            const delay = Math.max(0, 3000 - elapsedTime);
+            
+            timer1 = setTimeout(() => {
+              if (!active) return;
+              setOnboardingState('success');
+              
+              // Play success overlay for 2 seconds then logout
+              timer2 = setTimeout(() => {
+                if (!active) return;
+                handleLogout();
+              }, 2000);
+            }, delay);
+          } else {
+            // Existing user: direct logout callback to prompt GIS consent checkboxes again
+            setSyncStatus('error');
+            handleLogout();
+          }
+          return;
+        }
+        
         // If the file did not exist in Drive, they are a brand new registering user
         const isActuallyNew = loaded.isNewFile === true;
 
@@ -280,40 +312,8 @@ export default function App() {
       } catch (err) {
         if (!active) return;
         console.error("Failed to fetch data:", err);
-        
-        if (err.message === 'permission_denied') {
-          // Check if they are registered centrally or if they have logged in before
-          const isRegistered = localStorage.getItem(`farm_registered_${user.email}`) === 'true';
-          
-          if (!isRegistered) {
-            // New user registration flow with permission denied
-            if (user.type === 'google' && googleToken) {
-              await sendUserHeartbeat(user, googleToken, false);
-            }
-            if (active) setOnboardingState('registering');
-            
-            const elapsedTime = Date.now() - startTime;
-            const delay = Math.max(0, 3000 - elapsedTime);
-            
-            timer1 = setTimeout(() => {
-              if (!active) return;
-              setOnboardingState('success');
-              
-              // Play success overlay for 2 seconds then logout
-              timer2 = setTimeout(() => {
-                if (!active) return;
-                handleLogout();
-              }, 2000);
-            }, delay);
-          } else {
-            // Existing user: direct logout callback to prompt GIS consent checkboxes again
-            setSyncStatus('error');
-            handleLogout();
-          }
-        } else {
-          setSyncStatus(user.type === 'google' ? 'error' : 'local');
-          setOnboardingState('idle');
-        }
+        setSyncStatus(user.type === 'google' ? 'error' : 'local');
+        setOnboardingState('idle');
       }
     };
     
