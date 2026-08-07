@@ -258,13 +258,14 @@ export default function AdminPortal({ googleToken, onBack, onLogout, theme, onTo
                     <tr className="bg-slate-50 dark:bg-slate-950/40 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase border-b border-slate-100 dark:border-slate-800/80">
                       <th className="px-6 py-3.5">Farmer Profile</th>
                       <th className="px-6 py-3.5">Email Address</th>
+                      <th className="px-6 py-3.5 text-center">Drive Sync Permission</th>
                       <th className="px-6 py-3.5 text-right">Last Sync Timestamp</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60 text-xs">
                     {filteredUsers.length === 0 ? (
                       <tr>
-                        <td colSpan={3} className="px-6 py-8 text-center text-slate-400 dark:text-slate-500 italic">No registered farmers found matching query.</td>
+                        <td colSpan={4} className="px-6 py-8 text-center text-slate-400 dark:text-slate-500 italic">No registered farmers found matching query.</td>
                       </tr>
                     ) : (
                       filteredUsers.map((u, idx) => (
@@ -285,6 +286,17 @@ export default function AdminPortal({ googleToken, onBack, onLogout, theme, onTo
                             <span className="font-semibold text-slate-700 dark:text-slate-200">{u.name}</span>
                           </td>
                           <td className="px-6 py-4 text-slate-500 dark:text-slate-400 font-medium">{u.email}</td>
+                          <td className="px-6 py-4 text-center">
+                            {u.hasDrivePermission === false || u.hasDrivePermission === 'No' ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-bold bg-rose-55 bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-450 border border-rose-100 dark:border-rose-900/30 shadow-sm">
+                                ⚠️ Denied / Not Synced
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-bold bg-emerald-50 dark:bg-emerald-950/20 text-[#0C9D61] dark:text-emerald-450 border border-emerald-100 dark:border-emerald-900/30 shadow-sm">
+                                🟢 Granted / Synced
+                              </span>
+                            )}
+                          </td>
                           <td className="px-6 py-4 text-right text-slate-400 dark:text-slate-500 font-semibold">{formatDate(u.lastLogin)}</td>
                         </tr>
                       ))

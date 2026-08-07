@@ -6,9 +6,27 @@ const getApiUrl = () => {
 };
 
 // Send a login heartbeat to register/update the user centrally
-export async function sendUserHeartbeat(user, googleToken) {
+export async function sendUserHeartbeat(user, googleToken, hasDrivePermission = true) {
   const url = getApiUrl();
-  if (!url || !user || user.type !== 'google') return;
+  if (!url) {
+    // Save locally for fallback mock testing if no endpoint configured
+    const localUsers = JSON.parse(localStorage.getItem('farm_mock_registered_users') || '[]');
+    const existingIndex = localUsers.findIndex(u => u.email === user.email);
+    const updatedUser = {
+      email: user.email,
+      name: user.name,
+      picture: user.picture || "",
+      lastLogin: new Date().toISOString(),
+      hasDrivePermission
+    };
+    if (existingIndex !== -1) {
+      localUsers[existingIndex] = updatedUser;
+    } else {
+      localUsers.push(updatedUser);
+    }
+    localStorage.setItem('farm_mock_registered_users', JSON.stringify(localUsers));
+    return;
+  }
 
   try {
     await fetch(url, {
@@ -21,7 +39,8 @@ export async function sendUserHeartbeat(user, googleToken) {
         email: user.email,
         name: user.name,
         picture: user.picture || "",
-        token: googleToken
+        token: googleToken,
+        hasDrivePermission: hasDrivePermission
       })
     });
   } catch (err) {
@@ -75,11 +94,19 @@ export async function fetchAdminPortalData(googleToken) {
   const url = getApiUrl();
   if (!url) {
     // Mock data for local testing
-    const mockUsers = [
-      { email: 'iniansarathi2003@gmail.com', name: 'Inian Sarathi (Admin)', picture: '', lastLogin: new Date().toISOString() },
-      { email: 'farmer1@gmail.com', name: 'Ramesh Kumar', picture: '', lastLogin: new Date(Date.now() - 3600000).toISOString() },
-      { email: 'farmer2@gmail.com', name: 'Subramanian T', picture: '', lastLogin: new Date(Date.now() - 86400000).toISOString() }
+    const registeredUsers = JSON.parse(localStorage.getItem('farm_mock_registered_users') || '[]');
+    const defaultMockUsers = [
+      { email: 'iniansarathi2003@gmail.com', name: 'Inian Sarathi (Admin)', picture: '', lastLogin: new Date().toISOString(), hasDrivePermission: true },
+      { email: 'farmer1@gmail.com', name: 'Ramesh Kumar', picture: '', lastLogin: new Date(Date.now() - 3600000).toISOString(), hasDrivePermission: true },
+      { email: 'farmer2@gmail.com', name: 'Subramanian T', picture: '', lastLogin: new Date(Date.now() - 86400000).toISOString(), hasDrivePermission: false }
     ];
+    // Merge registered with default mocks (avoiding duplicates by email)
+    const mockUsers = [...registeredUsers];
+    defaultMockUsers.forEach(du => {
+      if (!mockUsers.some(mu => mu.email === du.email)) {
+        mockUsers.push(du);
+      }
+    });
     const mockFeedbacks = JSON.parse(localStorage.getItem('farm_mock_feedbacks') || '[]');
     if (mockFeedbacks.length === 0) {
       mockFeedbacks.push({

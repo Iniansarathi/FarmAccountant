@@ -31,6 +31,7 @@ export default function App() {
   const [isLanguageConfirmed, setIsLanguageConfirmed] = useState(!!sessionStorage.getItem('language_confirmed'));
   const [data, setData] = useState({ crops: [], expenses: [], harvests: [] });
   const [syncStatus, setSyncStatus] = useState('local'); // 'local', 'synced', 'syncing', 'unsaved', 'error'
+  const [onboardingState, setOnboardingState] = useState('idle'); // 'idle', 'registering', 'success'
   const [currentView, setCurrentView] = useState('dashboard'); // 'dashboard', 'crop_form', 'expense_form', 'harvest_form', 'crop_details', 'analytics'
   const [selectedCropId, setSelectedCropId] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -215,24 +216,47 @@ export default function App() {
     if (!user) return;
     
     const fetchData = async () => {
+      // For developer account, bypass onboarding
+      if (user.email === 'iniansarathi2003@gmail.com') {
+        setSyncStatus('synced');
+        return;
+      }
+
+      if (user.type === 'google') {
+        setOnboardingState('registering');
+      }
       setSyncStatus(user.type === 'google' ? 'syncing' : 'local');
+      
       try {
         const loaded = await loadUserData(user, googleToken);
         if (loaded.error === 'permission_denied') {
+          // Send registration heartbeat to admin portal even if they denied drive permission
+          if (user.type === 'google' && googleToken) {
+            await sendUserHeartbeat(user, googleToken, false);
+          }
           setSyncStatus('error');
+          setOnboardingState('success');
+          
+          // Automatically logout after 3.5 seconds
+          setTimeout(() => {
+            handleLogout();
+            setOnboardingState('idle');
+          }, 3500);
         } else {
           setData(loaded.data || { crops: [], expenses: [], harvests: [] });
           if (loaded.fileId) setFileId(loaded.fileId);
           setSyncStatus(user.type === 'google' ? 'synced' : 'local');
           
-          // Google user central database heartbeat registration
+          // Google user central database heartbeat registration (with permission)
           if (user.type === 'google' && googleToken) {
-            sendUserHeartbeat(user, googleToken);
+            await sendUserHeartbeat(user, googleToken, true);
           }
+          setOnboardingState('idle');
         }
       } catch (err) {
         console.error("Failed to fetch data:", err);
         setSyncStatus(user.type === 'google' ? 'error' : 'local');
+        setOnboardingState('idle');
       }
     };
     
@@ -666,52 +690,62 @@ export default function App() {
     return <Login />;
   }
 
-  // If Google sync failed due to permissions, block access with a full screen "User Login Error" overlay
-  if (user && user.type === 'google' && syncStatus === 'error') {
+  // Onboarding registration / sync diagnosis overlay
+  if (onboardingState !== 'idle') {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-50 p-4 font-sans text-left">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-4 font-sans text-left transition-colors">
         {/* Decorative blur orbs */}
-        <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-rose-200/40 rounded-full blur-3xl -z-10 animate-pulse"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-72 h-72 bg-amber-100/35 rounded-full blur-3xl -z-10 animate-pulse" style={{ animationDelay: '1.5s' }}></div>
+        <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-emerald-200/20 dark:bg-emerald-950/15 rounded-full blur-3xl -z-10 animate-pulse"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-72 h-72 bg-amber-100/35 dark:bg-amber-950/10 rounded-full blur-3xl -z-10 animate-pulse" style={{ animationDelay: '1.5s' }}></div>
 
-        <div className="w-full max-w-md glass-card rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-2xl space-y-6 text-center animate-scale-in">
-          <div className="space-y-3">
-            <div className="w-14 h-14 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center mx-auto shadow-md border border-rose-100 animate-bounce">
-              <span className="text-2xl">⚠️</span>
-            </div>
-            
-            <div className="space-y-1">
-              <h2 className="font-display font-extrabold text-xl text-slate-800 tracking-tight leading-none">
-                User Login Error
-              </h2>
-              <p className="text-[11px] font-bold text-rose-600">
-                டிரைவ் ஒத்திசைவு பிழை / सिंक त्रुटि
-              </p>
-            </div>
-
-            <p className="text-xs text-slate-500 font-semibold leading-relaxed max-w-[280px] mx-auto">
-              We couldn't connect to your Google Drive to back up your farm ledger. This happens when the file read/write permissions are not checked during Google Sign-in.
-            </p>
+        <div className="w-full max-w-md glass-card dark:bg-slate-900 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-6 text-center animate-scale-in">
+          <div className="space-y-4">
+            {onboardingState === 'registering' ? (
+              <div className="py-6 flex flex-col items-center justify-center space-y-4">
+                <div className="w-12 h-12 border-4 border-[#0C9D61] border-t-transparent rounded-full animate-spin"></div>
+                <div className="space-y-2">
+                  <h3 className="font-display font-extrabold text-base text-slate-800 dark:text-slate-100 tracking-tight leading-none">
+                    Registering Account...
+                  </h3>
+                  <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500">
+                    கணக்கு பதிவு செய்யப்படுகிறது... / खाता पंजीकृत किया जा रहा है...
+                  </p>
+                  <p className="text-[11px] font-medium text-slate-500 dark:text-slate-450 leading-relaxed max-w-[280px] mx-auto">
+                    Verifying secure database synchronization with your Google Drive backup. Please wait.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="py-4 flex flex-col items-center justify-center space-y-4 animate-scale-in">
+                <div className="w-14 h-14 bg-emerald-50 dark:bg-emerald-950/30 text-[#0C9D61] rounded-full flex items-center justify-center shadow-md border border-emerald-100 dark:border-emerald-900/30 animate-bounce">
+                  <span className="text-xl font-bold text-emerald-600 dark:text-emerald-450">✓</span>
+                </div>
+                <div className="space-y-2">
+                  <h3 className="font-display font-extrabold text-base text-slate-800 dark:text-slate-100 tracking-tight leading-none">
+                    Registration Successful!
+                  </h3>
+                  <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-450">
+                    பதிவு வெற்றிகரமாக முடிந்தது! / पंजीकरण सफल रहा!
+                  </p>
+                  <p className="text-xs text-slate-650 dark:text-slate-350 font-bold bg-emerald-50/50 dark:bg-emerald-950/10 border border-emerald-100/50 dark:border-emerald-900/20 p-3 rounded-xl max-w-[320px] mx-auto leading-relaxed">
+                    User <span className="underline font-extrabold text-slate-800 dark:text-white">{user?.email}</span> was registered successfully.
+                  </p>
+                  <p className="text-[11px] font-medium text-slate-500 dark:text-slate-450 leading-relaxed max-w-[290px] mx-auto pt-2">
+                    To finalize the drive sync setup, you will be logged out now. On your next sign-in, please check the permission checkbox.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
-
-          <div className="bg-slate-50 border border-slate-150 rounded-2xl p-4 text-left text-slate-650 text-xs space-y-1.5 leading-relaxed font-medium">
-            <p className="font-bold text-slate-800">To fix this issue:</p>
-            <ol className="list-decimal list-inside space-y-1 pl-0.5">
-              <li>Click the <strong>Try Again</strong> button below.</li>
-              <li>Sign in with Google again.</li>
-              <li>On the permission screen, make sure to <strong>CHECK/TICK</strong> the checkbox allowing the app to view and manage its own files in Google Drive.</li>
-            </ol>
-          </div>
-
-          <button
-            onClick={handleLogout}
-            className="w-full py-3 bg-[#0C9D61] hover:bg-emerald-700 text-white font-bold text-xs rounded-2xl shadow-lg shadow-emerald-500/15 flex items-center justify-center gap-2 hover-scale hover-scale-active cursor-pointer"
-          >
-            <span>Try Again / மீண்டும் முயலவும்</span>
-          </button>
         </div>
       </div>
     );
+  }
+
+  // If Google sync failed due to permissions and onboarding is idle, redirect to logout to clear the session
+  if (user && user.type === 'google' && syncStatus === 'error' && onboardingState === 'idle') {
+    handleLogout();
+    return null;
   }
 
   // Gated Developer Admin Portal Workspace
