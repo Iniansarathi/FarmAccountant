@@ -198,6 +198,18 @@ export default function App() {
     }
   }, []);
 
+  // Update manifest dynamically based on whether logged in as admin to support unique shortcut icons
+  useEffect(() => {
+    const link = document.querySelector('link[rel="manifest"]');
+    if (link) {
+      if (user && user.email === 'iniansarathi2003@gmail.com') {
+        link.setAttribute('href', '/manifest-admin.json');
+      } else {
+        link.setAttribute('href', '/manifest.json');
+      }
+    }
+  }, [user]);
+
   // Fetch/load user data when user changes
   useEffect(() => {
     if (!user) return;
@@ -705,8 +717,15 @@ export default function App() {
   // Gated Developer Admin Portal Workspace
   if (user && user.email === 'iniansarathi2003@gmail.com') {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col w-full max-w-lg md:max-w-6xl mx-auto md:border-x md:border-slate-200 md:shadow-md relative overflow-y-auto overflow-x-hidden scrollbar-none transition-all duration-300">
-        <AdminPortal googleToken={googleToken} onLogout={handleLogout} />
+      <div className={`min-h-screen flex flex-col w-full max-w-lg md:max-w-6xl mx-auto md:border-x md:border-slate-200 md:shadow-md relative overflow-y-auto overflow-x-hidden scrollbar-none transition-all duration-300 ${
+        theme === 'dark' ? 'dark bg-slate-905 bg-slate-950 text-slate-100 md:border-slate-800' : 'bg-slate-50 text-slate-800'
+      }`}>
+        <AdminPortal 
+          googleToken={googleToken} 
+          onLogout={handleLogout} 
+          theme={theme}
+          onToggleTheme={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')}
+        />
       </div>
     );
   }
