@@ -124,7 +124,7 @@ export async function loadUserData(user, googleToken = null) {
       }
 
       localStorage.setItem('google_drive_file_id', fileId);
-      return { data: driveData || data || INITIAL_DATA, fileId };
+      return { data: driveData || data || INITIAL_DATA, fileId, isNewFile: !searchResult.files || searchResult.files.length === 0 };
     } catch (err) {
       console.error("Error syncing with Google Drive:", err);
       // Fallback to cache
