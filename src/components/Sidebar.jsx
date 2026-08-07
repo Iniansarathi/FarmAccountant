@@ -15,7 +15,8 @@ export default function Sidebar({
   deferredPrompt,
   onTriggerInstall,
   onShowIOSInstallGuide,
-  onOpenFeedback
+  onOpenFeedback,
+  onRequestDeleteAccount
 }) {
   const { t } = useTranslation();
 
@@ -180,6 +181,13 @@ export default function Sidebar({
             className="w-full flex items-center gap-2.5 px-3 py-2 text-slate-655 hover:bg-emerald-50/50 hover:text-emerald-700 text-slate-700 font-semibold text-xs rounded-lg transition-all cursor-pointer text-left"
           >
             <span className="text-sm">💬</span> Send Feedback
+          </button>
+
+          <button
+            onClick={() => { onRequestDeleteAccount(); onClose(); }}
+            className="w-full flex items-center gap-2.5 px-3 py-2 text-rose-600 hover:bg-rose-50/50 hover:text-rose-700 font-semibold text-xs rounded-lg transition-all cursor-pointer text-left"
+          >
+            <span className="text-sm">🗑️</span> Delete Account
           </button>
 
           {user?.email === 'iniansarathi2003@gmail.com' && (

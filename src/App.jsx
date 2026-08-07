@@ -19,7 +19,7 @@ import LanguageSelector from './components/LanguageSelector';
 // Services
 import { initGoogleOAuth, fetchGoogleUserInfo, getStoredGoogleToken, clearAuthSession, requestGoogleToken, registerPasswordForGoogleUser } from './services/auth';
 import { loadUserData, saveUserData } from './services/storage';
-import { submitUserFeedback, sendUserHeartbeat } from './services/adminApi';
+import { submitUserFeedback, sendUserHeartbeat, requestDeletion } from './services/adminApi';
 
 export default function App() {
   const { t } = useTranslation();
@@ -208,7 +208,6 @@ export default function App() {
         const loaded = await loadUserData(user, googleToken);
         if (loaded.error === 'permission_denied') {
           setSyncStatus('error');
-          alert("Google Drive access permission was not granted! Please log out, sign in with Google again, and make sure to CHECK the box allowing the app to view and manage its own files on Google Drive.");
         } else {
           setData(loaded.data || { crops: [], expenses: [], harvests: [] });
           if (loaded.fileId) setFileId(loaded.fileId);
@@ -253,6 +252,37 @@ export default function App() {
     setFileId(null);
     localStorage.removeItem('farm_current_user');
     setCurrentView('dashboard');
+  };
+
+  const handleRequestDeleteAccount = async () => {
+    if (!user) return;
+    const confirmMessage = user.type === 'google'
+      ? "Are you sure you want to request account deletion? This will log you out, clear your local browser cache, and request the administrator to delete your registered profile. Once approved by the admin, you can start a brand new ledger registration next time."
+      : "Are you sure you want to permanently delete your local account and all stored crop data? This action is irreversible!";
+      
+    if (!window.confirm(confirmMessage)) return;
+
+    try {
+      if (user.type === 'google') {
+        // Send deletion request to admin sheet
+        await requestDeletion(user);
+        
+        // Clear local browser cache
+        localStorage.removeItem(`farm_data_google_${user.email}`);
+        localStorage.removeItem('google_drive_file_id');
+        
+        alert("Account deletion request submitted successfully. You will now be logged out.");
+      } else {
+        // Local user: delete ledger immediately
+        localStorage.removeItem(`farm_data_local_${user.username}`);
+        alert("Local account ledger deleted successfully.");
+      }
+      
+      handleLogout();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to submit deletion request: " + err.message);
+    }
   };
 
   const handleSwitchGoogleAccount = () => {
@@ -604,6 +634,54 @@ export default function App() {
     return <Login />;
   }
 
+  // If Google sync failed due to permissions, block access with a full screen "User Login Error" overlay
+  if (user && user.type === 'google' && syncStatus === 'error') {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-50 p-4 font-sans text-left">
+        {/* Decorative blur orbs */}
+        <div className="absolute top-1/4 left-1/4 w-72 h-72 bg-rose-200/40 rounded-full blur-3xl -z-10 animate-pulse"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-72 h-72 bg-amber-100/35 rounded-full blur-3xl -z-10 animate-pulse" style={{ animationDelay: '1.5s' }}></div>
+
+        <div className="w-full max-w-md glass-card rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-2xl space-y-6 text-center animate-scale-in">
+          <div className="space-y-3">
+            <div className="w-14 h-14 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center mx-auto shadow-md border border-rose-100 animate-bounce">
+              <span className="text-2xl">⚠️</span>
+            </div>
+            
+            <div className="space-y-1">
+              <h2 className="font-display font-extrabold text-xl text-slate-800 tracking-tight leading-none">
+                User Login Error
+              </h2>
+              <p className="text-[11px] font-bold text-rose-600">
+                டிரைவ் ஒத்திசைவு பிழை / सिंक त्रुटि
+              </p>
+            </div>
+
+            <p className="text-xs text-slate-500 font-semibold leading-relaxed max-w-[280px] mx-auto">
+              We couldn't connect to your Google Drive to back up your farm ledger. This happens when the file read/write permissions are not checked during Google Sign-in.
+            </p>
+          </div>
+
+          <div className="bg-slate-50 border border-slate-150 rounded-2xl p-4 text-left text-slate-650 text-xs space-y-1.5 leading-relaxed font-medium">
+            <p className="font-bold text-slate-800">To fix this issue:</p>
+            <ol className="list-decimal list-inside space-y-1 pl-0.5">
+              <li>Click the <strong>Try Again</strong> button below.</li>
+              <li>Sign in with Google again.</li>
+              <li>On the permission screen, make sure to <strong>CHECK/TICK</strong> the checkbox allowing the app to view and manage its own files in Google Drive.</li>
+            </ol>
+          </div>
+
+          <button
+            onClick={handleLogout}
+            className="w-full py-3 bg-[#0C9D61] hover:bg-emerald-700 text-white font-bold text-xs rounded-2xl shadow-lg shadow-emerald-500/15 flex items-center justify-center gap-2 hover-scale hover-scale-active cursor-pointer"
+          >
+            <span>Try Again / மீண்டும் முயலவும்</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div ref={scrollContainerRef} className="flex flex-col h-screen bg-slate-50 w-full max-w-lg md:max-w-6xl mx-auto md:border-x md:border-slate-200 md:shadow-md relative overflow-y-auto overflow-x-hidden scrollbar-none transition-all duration-300">
       
@@ -671,6 +749,7 @@ export default function App() {
         onTriggerInstall={handleTriggerInstall}
         onShowIOSInstallGuide={() => setShowIOSInstallGuide(true)}
         onOpenFeedback={() => setIsFeedbackModalOpen(true)}
+        onRequestDeleteAccount={handleRequestDeleteAccount}
       />
 
       {/* Main View Area */}

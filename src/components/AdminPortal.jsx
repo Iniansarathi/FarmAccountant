@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Users, MessageSquare, Monitor, Calendar, Search, ArrowLeft, Image as ImageIcon } from 'lucide-react';
-import { fetchAdminPortalData } from '../services/adminApi';
+import { Users, MessageSquare, Monitor, Calendar, Search, ArrowLeft, Image as ImageIcon, Trash2 } from 'lucide-react';
+import { fetchAdminPortalData, approveDeletion } from '../services/adminApi';
 
 export default function AdminPortal({ googleToken, onBack }) {
-  const [activeTab, setActiveTab] = useState('users'); // 'users', 'feedbacks'
+  const [activeTab, setActiveTab] = useState('users'); // 'users', 'feedbacks', 'deletions'
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [data, setData] = useState({ users: [], feedbacks: [] });
+  const [data, setData] = useState({ users: [], feedbacks: [], deletionRequests: [] });
   const [searchQuery, setSearchQuery] = useState('');
+  const [actionLoading, setActionLoading] = useState(null); // Track email being deleted
   const [selectedScreenshot, setSelectedScreenshot] = useState(null); // Lightbox image source
 
   useEffect(() => {
@@ -37,6 +38,36 @@ export default function AdminPortal({ googleToken, onBack }) {
     f.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
     f.message.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const filteredDeletions = (data.deletionRequests || []).filter(req => {
+    const email = typeof req === 'string' ? req : (req.email || '');
+    const name = typeof req === 'string' ? '' : (req.name || '');
+    return email.toLowerCase().includes(searchQuery.toLowerCase()) || 
+           name.toLowerCase().includes(searchQuery.toLowerCase());
+  });
+
+  const handleApproveDelete = async (email) => {
+    if (!window.confirm(`Are you sure you want to approve deletion for ${email}? This will centrally clear their profile registration.`)) return;
+    setActionLoading(email);
+    try {
+      await approveDeletion(email, googleToken);
+      alert(`Account deletion successfully approved for ${email}.`);
+      
+      setData(prev => ({
+        ...prev,
+        deletionRequests: (prev.deletionRequests || []).filter(req => {
+          const reqEmail = typeof req === 'string' ? req : (req.email || '');
+          return reqEmail !== email;
+        }),
+        users: (prev.users || []).filter(u => u.email !== email)
+      }));
+    } catch (err) {
+      console.error(err);
+      alert("Failed to approve deletion: " + err.message);
+    } finally {
+      setActionLoading(null);
+    }
+  };
 
   const formatDate = (isoStr) => {
     if (!isoStr) return 'N/A';
@@ -102,7 +133,7 @@ export default function AdminPortal({ googleToken, onBack }) {
       ) : (
         <>
           {/* Summary Cards */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
               <div className="w-10 h-10 rounded-xl bg-emerald-50 text-[#0C9D61] flex items-center justify-center shadow-inner">
                 <Users size={20} />
@@ -122,14 +153,24 @@ export default function AdminPortal({ googleToken, onBack }) {
                 <span className="text-xl font-extrabold text-slate-800 font-display mt-0.5 block">{data.feedbacks.length}</span>
               </div>
             </div>
+
+            <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shadow-inner">
+                <Trash2 size={20} />
+              </div>
+              <div>
+                <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Delete Requests</span>
+                <span className="text-xl font-extrabold text-slate-800 font-display mt-0.5 block">{(data.deletionRequests || []).length}</span>
+              </div>
+            </div>
           </div>
 
           {/* Tab Switcher & Search */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-white p-2 rounded-xl border border-slate-100 shadow-sm">
-            <div className="flex bg-slate-100 p-1 rounded-lg w-full sm:w-auto">
+            <div className="flex bg-slate-100 p-1 rounded-lg w-full sm:w-auto overflow-x-auto scrollbar-none">
               <button
                 onClick={() => { setActiveTab('users'); setSearchQuery(''); }}
-                className={`flex-1 sm:flex-initial px-4 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                className={`flex-1 sm:flex-initial px-4 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                   activeTab === 'users' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-800'
                 }`}
               >
@@ -137,11 +178,19 @@ export default function AdminPortal({ googleToken, onBack }) {
               </button>
               <button
                 onClick={() => { setActiveTab('feedbacks'); setSearchQuery(''); }}
-                className={`flex-1 sm:flex-initial px-4 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                className={`flex-1 sm:flex-initial px-4 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                   activeTab === 'feedbacks' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-800'
                 }`}
               >
                 Feedback Log ({filteredFeedbacks.length})
+              </button>
+              <button
+                onClick={() => { setActiveTab('deletions'); setSearchQuery(''); }}
+                className={`flex-1 sm:flex-initial px-4 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+                  activeTab === 'deletions' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                Delete Requests ({(data.deletionRequests || []).length})
               </button>
             </div>
 
@@ -150,7 +199,13 @@ export default function AdminPortal({ googleToken, onBack }) {
               <Search size={13} className="absolute left-3 text-slate-400 pointer-events-none" />
               <input
                 type="text"
-                placeholder={activeTab === 'users' ? "Search users by name/email..." : "Search feedbacks..."}
+                placeholder={
+                  activeTab === 'users' 
+                    ? "Search users by name/email..." 
+                    : activeTab === 'feedbacks'
+                    ? "Search feedbacks..."
+                    : "Search deletion requests..."
+                }
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-slate-200 text-xs bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 shadow-inner transition-all"
@@ -202,7 +257,7 @@ export default function AdminPortal({ googleToken, onBack }) {
                 </table>
               </div>
             </div>
-          ) : (
+          ) : activeTab === 'feedbacks' ? (
             <div className="space-y-4">
               {filteredFeedbacks.length === 0 ? (
                 <div className="bg-white rounded-2xl border border-slate-100 shadow-sm py-12 text-center text-slate-400 italic text-xs">
@@ -256,6 +311,53 @@ export default function AdminPortal({ googleToken, onBack }) {
                   </div>
                 ))
               )}
+            </div>
+          ) : (
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50 text-[10px] font-bold text-slate-400 uppercase border-b border-slate-100">
+                      <th className="px-6 py-3.5">Email Address</th>
+                      <th className="px-6 py-3.5">Requester Info</th>
+                      <th className="px-6 py-3.5 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50 text-xs">
+                    {filteredDeletions.length === 0 ? (
+                      <tr>
+                        <td colSpan={3} className="px-6 py-8 text-center text-slate-400 italic">No deletion requests pending.</td>
+                      </tr>
+                    ) : (
+                      filteredDeletions.map((req, idx) => {
+                        const email = typeof req === 'string' ? req : (req.email || '');
+                        const name = typeof req === 'string' ? 'Google Account User' : (req.name || 'Google Account User');
+                        const isDeleting = actionLoading === email;
+                        
+                        return (
+                          <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="px-6 py-4 font-semibold text-slate-700">{email}</td>
+                            <td className="px-6 py-4 text-slate-500 font-medium">{name}</td>
+                            <td className="px-6 py-4 text-right">
+                              <button
+                                disabled={isDeleting}
+                                onClick={() => handleApproveDelete(email)}
+                                className={`px-3 py-1.5 rounded-lg font-bold text-[10px] shadow-sm transition-all cursor-pointer ${
+                                  isDeleting 
+                                    ? 'bg-slate-100 text-slate-400 border border-slate-200' 
+                                    : 'bg-rose-600 text-white hover:bg-rose-700 hover-scale'
+                                }`}
+                              >
+                                {isDeleting ? "Processing..." : "Approve Deletion"}
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </>

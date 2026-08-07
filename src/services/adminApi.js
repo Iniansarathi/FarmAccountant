@@ -70,7 +70,7 @@ export async function submitUserFeedback(user, message, screenshotBase64, device
   return await response.json();
 }
 
-// Fetch all registered users and feedback logs (gated for iniansarathi2003@gmail.com)
+// Fetch all registered users, feedback logs, and deletion requests (gated for iniansarathi2003@gmail.com)
 export async function fetchAdminPortalData(googleToken) {
   const url = getApiUrl();
   if (!url) {
@@ -91,7 +91,8 @@ export async function fetchAdminPortalData(googleToken) {
         device: 'Android/Chrome'
       });
     }
-    return { users: mockUsers, feedbacks: mockFeedbacks, isMock: true };
+    const mockDeletionRequests = JSON.parse(localStorage.getItem('farm_mock_deletion_requests') || '[]');
+    return { users: mockUsers, feedbacks: mockFeedbacks, deletionRequests: mockDeletionRequests, isMock: true };
   }
 
   // Fetch with token in query params to bypass CORS preflight header restrictions
@@ -105,3 +106,68 @@ export async function fetchAdminPortalData(googleToken) {
 
   return await response.json();
 }
+
+// Submit a request to delete a user account
+export async function requestDeletion(user) {
+  const url = getApiUrl();
+  if (!url) {
+    // Simulated Sandbox
+    const requests = JSON.parse(localStorage.getItem('farm_mock_deletion_requests') || '[]');
+    if (!requests.includes(user.email)) {
+      requests.push(user.email);
+      localStorage.setItem('farm_mock_deletion_requests', JSON.stringify(requests));
+    }
+    return { success: true, isMock: true };
+  }
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'text/plain;charset=utf-8'
+    },
+    body: JSON.stringify({
+      action: 'requestDeletion',
+      email: user.email,
+      name: user.name || user.username
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to submit deletion request");
+  }
+
+  return await response.json();
+}
+
+// Approve account deletion centrally (Admin only)
+export async function approveDeletion(targetEmail, googleToken) {
+  const url = getApiUrl();
+  if (!url) {
+    // Simulated Sandbox
+    let requests = JSON.parse(localStorage.getItem('farm_mock_deletion_requests') || '[]');
+    requests = requests.filter(email => email !== targetEmail);
+    localStorage.setItem('farm_mock_deletion_requests', JSON.stringify(requests));
+    
+    // Also remove them from mock users list if desired (we don't persist users locally, but we can return success)
+    return { success: true, isMock: true };
+  }
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'text/plain;charset=utf-8'
+    },
+    body: JSON.stringify({
+      action: 'approveDeletion',
+      email: targetEmail,
+      token: googleToken
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to approve deletion request");
+  }
+
+  return await response.json();
+}
+
