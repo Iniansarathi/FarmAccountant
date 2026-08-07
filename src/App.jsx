@@ -702,6 +702,15 @@ export default function App() {
     );
   }
 
+  // Gated Developer Admin Portal Workspace
+  if (user && user.email === 'iniansarathi2003@gmail.com') {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col w-full max-w-lg md:max-w-6xl mx-auto md:border-x md:border-slate-200 md:shadow-md relative overflow-y-auto overflow-x-hidden scrollbar-none transition-all duration-300">
+        <AdminPortal googleToken={googleToken} onLogout={handleLogout} />
+      </div>
+    );
+  }
+
   return (
     <div ref={scrollContainerRef} className="flex flex-col h-screen bg-slate-50 w-full max-w-lg md:max-w-6xl mx-auto md:border-x md:border-slate-200 md:shadow-md relative overflow-y-auto overflow-x-hidden scrollbar-none transition-all duration-300">
       

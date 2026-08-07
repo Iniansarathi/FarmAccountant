@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Users, MessageSquare, Monitor, Calendar, Search, ArrowLeft, Image as ImageIcon, Trash2 } from 'lucide-react';
+import { Users, MessageSquare, Monitor, Calendar, Search, ArrowLeft, Image as ImageIcon, Trash2, LogOut } from 'lucide-react';
 import { fetchAdminPortalData, approveDeletion } from '../services/adminApi';
 
-export default function AdminPortal({ googleToken, onBack }) {
+export default function AdminPortal({ googleToken, onBack, onLogout }) {
   const [activeTab, setActiveTab] = useState('users'); // 'users', 'feedbacks', 'deletions'
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -90,26 +90,44 @@ export default function AdminPortal({ googleToken, onBack }) {
       {/* Header bar */}
       <div className="flex items-center justify-between bg-white p-4 rounded-xl border border-slate-100 shadow-sm">
         <div className="flex items-center gap-3">
-          <button 
-            onClick={onBack}
-            className="p-2 rounded-lg hover:bg-slate-50 text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
-            title="Back to Dashboard"
-          >
-            <ArrowLeft size={16} />
-          </button>
+          {onBack && (
+            <button 
+              onClick={onBack}
+              className="p-2 rounded-lg hover:bg-slate-50 text-slate-500 hover:text-slate-800 transition-colors cursor-pointer mr-1"
+              title="Back to Dashboard"
+            >
+              <ArrowLeft size={16} />
+            </button>
+          )}
+          <img 
+            src="/admin_logo.jpg" 
+            alt="Admin Portal Logo" 
+            className="w-9 h-9 rounded-xl border border-slate-150 shadow-inner object-cover"
+          />
           <div>
-            <h2 className="font-display font-extrabold text-lg text-slate-800 tracking-tight m-0">
+            <h2 className="font-display font-extrabold text-base text-slate-800 tracking-tight m-0">
               Developer Admin Portal
             </h2>
             <p className="text-[10px] text-emerald-700 font-semibold mt-0.5"> Gated: iniansarathi2003@gmail.com</p>
           </div>
         </div>
 
-        {data.isMock && (
-          <span className="text-[9px] bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-full font-bold">
-            Simulated Sandbox Mode
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {data.isMock && (
+            <span className="text-[9px] bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-full font-bold">
+              Simulated Sandbox Mode
+            </span>
+          )}
+          {onLogout && (
+            <button
+              onClick={onLogout}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-rose-200 bg-white text-rose-600 hover:bg-rose-50 text-[10px] font-bold hover-scale hover-scale-active transition-all cursor-pointer shadow-sm"
+            >
+              <LogOut size={11} />
+              <span>Log Out</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {data.isMock && (
