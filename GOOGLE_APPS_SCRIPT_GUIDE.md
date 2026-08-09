@@ -49,7 +49,7 @@ function doPost(e) {
       blockedSheet.appendRow(["Email", "BlockedAt"]);
     }
     if (notificationsSheet.getLastRow() === 0) {
-      notificationsSheet.appendRow(["Email", "Message", "Status", "Timestamp", "OriginalFeedback"]);
+      notificationsSheet.appendRow(["Email", "Message", "Status", "Timestamp", "OriginalFeedback", "OriginalScreenshot", "OriginalTimestamp"]);
     }
     
     if (action === "registerUser") {
@@ -129,7 +129,7 @@ function doPost(e) {
       // Get unread notifications
       var notificationsSheet = ss.getSheetByName("Notifications") || ss.insertSheet("Notifications");
       if (notificationsSheet.getLastRow() === 0) {
-        notificationsSheet.appendRow(["Email", "Message", "Status", "Timestamp", "OriginalFeedback"]);
+        notificationsSheet.appendRow(["Email", "Message", "Status", "Timestamp", "OriginalFeedback", "OriginalScreenshot", "OriginalTimestamp"]);
       }
       var notifRows = notificationsSheet.getDataRange().getValues();
       var unreadNotifications = [];
@@ -138,7 +138,9 @@ function doPost(e) {
           unreadNotifications.push({
             message: notifRows[i][1],
             timestamp: notifRows[i][3],
-            originalFeedback: notifRows[i][4] || ""
+            originalFeedback: notifRows[i][4] || "",
+            originalScreenshot: notifRows[i][5] || "",
+            originalTimestamp: notifRows[i][6] || ""
           });
         }
       }
@@ -257,11 +259,21 @@ function doPost(e) {
       
       var notificationsSheet = ss.getSheetByName("Notifications") || ss.insertSheet("Notifications");
       if (notificationsSheet.getLastRow() === 0) {
-        notificationsSheet.appendRow(["Email", "Message", "Status", "Timestamp", "OriginalFeedback"]);
+        notificationsSheet.appendRow(["Email", "Message", "Status", "Timestamp", "OriginalFeedback", "OriginalScreenshot", "OriginalTimestamp"]);
       }
       
       var originalFeedback = data.originalFeedback || "";
-      notificationsSheet.appendRow([targetEmail, message, "Unread", new Date().toISOString(), originalFeedback]);
+      var originalScreenshot = data.originalScreenshot || "";
+      var originalTimestamp = data.originalTimestamp || "";
+      notificationsSheet.appendRow([
+        targetEmail, 
+        message, 
+        "Unread", 
+        new Date().toISOString(), 
+        originalFeedback, 
+        originalScreenshot, 
+        originalTimestamp
+      ]);
       JSON_RESPONSE = { success: true };
       
     } else if (action === "markNotificationRead") {

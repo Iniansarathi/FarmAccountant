@@ -1243,9 +1243,39 @@ export default function App() {
             </div>
 
             {activeNotification.originalFeedback && (
-              <div className="space-y-1 bg-slate-50 dark:bg-slate-950/20 p-3 rounded-xl border border-slate-150 dark:border-slate-850/60 text-[11px] font-medium text-slate-500 dark:text-slate-405">
-                <span className="text-[9px] font-bold text-[#0C9D61] dark:text-emerald-450 uppercase tracking-wider block">Your Feedback / உங்கள் கருத்து / आपका फ़ीडबैक:</span>
-                <p className="italic leading-normal text-slate-600 dark:text-slate-350">"{activeNotification.originalFeedback}"</p>
+              <div className="space-y-2 bg-slate-50 dark:bg-slate-950/20 p-3.5 rounded-2xl border border-slate-150 dark:border-slate-850/60 text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800/60 pb-1.5 mb-1.5">
+                  <span className="text-[9px] font-extrabold text-[#0C9D61] dark:text-emerald-450 uppercase tracking-wider block">Your Feedback / உங்கள் கருத்து:</span>
+                  {activeNotification.originalTimestamp && (
+                    <span className="text-[8px] text-slate-400 dark:text-slate-500 font-bold">
+                      {(() => {
+                        try {
+                          const d = new Date(activeNotification.originalTimestamp);
+                          return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                        } catch {
+                          return '';
+                        }
+                      })()}
+                    </span>
+                  )}
+                </div>
+                
+                <p className="italic leading-relaxed text-slate-655 dark:text-slate-300 font-semibold text-xs">
+                  "{activeNotification.originalFeedback}"
+                </p>
+
+                {activeNotification.originalScreenshot && (
+                  <div className="pt-2">
+                    <span className="text-[8px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Attached Screenshot:</span>
+                    <div className="relative max-w-[120px] rounded-lg overflow-hidden border border-slate-150 dark:border-slate-800 shadow-sm bg-slate-100 dark:bg-slate-950">
+                      <img 
+                        src={activeNotification.originalScreenshot} 
+                        alt="Feedback Attachment" 
+                        className="max-h-16 object-contain mx-auto"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
