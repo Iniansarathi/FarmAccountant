@@ -59,6 +59,12 @@ function doPost(e) {
       var lastLogin = new Date().toISOString();
       var hasDrivePermission = data.hasDrivePermission ? "Yes" : "No";
       
+      var mobile = data.mobile || "";
+      var state = data.state || "";
+      var district = data.district || "";
+      var area = data.area || "";
+      var pincode = data.pincode || "";
+      
       // Check if user is blocked
       var blockedRows = blockedSheet.getDataRange().getValues();
       var isBlocked = false;
@@ -88,8 +94,15 @@ function doPost(e) {
         usersSheet.getRange(foundIndex, 3).setValue(picture);
         usersSheet.getRange(foundIndex, 4).setValue(lastLogin);
         usersSheet.getRange(foundIndex, 5).setValue(hasDrivePermission);
+        
+        // Only update profile details if provided in request to avoid overwriting existing details
+        if (mobile) usersSheet.getRange(foundIndex, 6).setValue(mobile);
+        if (state) usersSheet.getRange(foundIndex, 7).setValue(state);
+        if (district) usersSheet.getRange(foundIndex, 8).setValue(district);
+        if (area) usersSheet.getRange(foundIndex, 9).setValue(area);
+        if (pincode) usersSheet.getRange(foundIndex, 10).setValue(pincode);
       } else {
-        usersSheet.appendRow([email, name, picture, lastLogin, hasDrivePermission]);
+        usersSheet.appendRow([email, name, picture, lastLogin, hasDrivePermission, mobile, state, district, area, pincode]);
       }
       JSON_RESPONSE = { success: true };
       
@@ -119,9 +132,20 @@ function doPost(e) {
       
       var userRows = usersSheet.getDataRange().getValues();
       var exists = false;
+      var mobile = "";
+      var state = "";
+      var district = "";
+      var area = "";
+      var pincode = "";
+      
       for (var i = 1; i < userRows.length; i++) {
         if (userRows[i][0] === email) {
           exists = true;
+          mobile = userRows[i][5] || "";
+          state = userRows[i][6] || "";
+          district = userRows[i][7] || "";
+          area = userRows[i][8] || "";
+          pincode = userRows[i][9] || "";
           break;
         }
       }
@@ -145,7 +169,16 @@ function doPost(e) {
         }
       }
       
-      JSON_RESPONSE = { registered: exists, blocked: isBlocked, notifications: unreadNotifications };
+      JSON_RESPONSE = { 
+        registered: exists, 
+        blocked: isBlocked, 
+        notifications: unreadNotifications,
+        mobile: mobile,
+        state: state,
+        district: district,
+        area: area,
+        pincode: pincode
+      };
       
     } else if (action === "requestDeletion") {
       var email = data.email;
@@ -367,14 +400,19 @@ function doGet(e) {
       
       var users = [];
       if (usersSheet && usersSheet.getLastRow() > 1) {
-        var uData = usersSheet.getRange(2, 1, usersSheet.getLastRow() - 1, 5).getValues();
+        var uData = usersSheet.getRange(2, 1, usersSheet.getLastRow() - 1, 10).getValues();
         for (var i = 0; i < uData.length; i++) {
           users.push({
             email: uData[i][0],
             name: uData[i][1],
             picture: uData[i][2],
             lastLogin: uData[i][3],
-            hasDrivePermission: uData[i][4] === "Yes" || uData[i][4] === true
+            hasDrivePermission: uData[i][4] === "Yes" || uData[i][4] === true,
+            mobile: uData[i][5] || "",
+            state: uData[i][6] || "",
+            district: uData[i][7] || "",
+            area: uData[i][8] || "",
+            pincode: uData[i][9] || ""
           });
         }
       }

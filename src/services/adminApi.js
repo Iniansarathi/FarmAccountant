@@ -6,7 +6,7 @@ const getApiUrl = () => {
 };
 
 // Send a login heartbeat to register/update the user centrally
-export async function sendUserHeartbeat(user, googleToken, hasDrivePermission = true) {
+export async function sendUserHeartbeat(user, googleToken, hasDrivePermission = true, profileData = null) {
   const url = getApiUrl();
   if (!url) {
     // Save locally for fallback mock testing if no endpoint configured
@@ -14,13 +14,18 @@ export async function sendUserHeartbeat(user, googleToken, hasDrivePermission = 
     const existingIndex = localUsers.findIndex(u => u.email === user.email);
     const updatedUser = {
       email: user.email,
-      name: user.name,
+      name: profileData?.name || user.name,
       picture: user.picture || "",
       lastLogin: new Date().toISOString(),
-      hasDrivePermission
+      hasDrivePermission,
+      mobile: profileData?.mobile || "",
+      state: profileData?.state || "",
+      district: profileData?.district || "",
+      area: profileData?.area || "",
+      pincode: profileData?.pincode || ""
     };
     if (existingIndex !== -1) {
-      localUsers[existingIndex] = updatedUser;
+      localUsers[existingIndex] = { ...localUsers[existingIndex], ...updatedUser };
     } else {
       localUsers.push(updatedUser);
     }
@@ -37,10 +42,15 @@ export async function sendUserHeartbeat(user, googleToken, hasDrivePermission = 
       body: JSON.stringify({
         action: 'registerUser',
         email: user.email,
-        name: user.name,
+        name: profileData?.name || user.name,
         picture: user.picture || "",
         token: googleToken,
-        hasDrivePermission: hasDrivePermission
+        hasDrivePermission: hasDrivePermission,
+        mobile: profileData?.mobile || "",
+        state: profileData?.state || "",
+        district: profileData?.district || "",
+        area: profileData?.area || "",
+        pincode: profileData?.pincode || ""
       })
     });
     if (response.ok) {
@@ -144,14 +154,30 @@ export async function checkUserRegistration(email) {
   if (!url) {
     const localUsers = JSON.parse(localStorage.getItem('farm_mock_registered_users') || '[]');
     const exists = localUsers.some(u => u.email === email);
+    const existingUser = localUsers.find(u => u.email === email);
     
     // Fetch mock notifications
     const mockNotifs = JSON.parse(localStorage.getItem('farm_mock_notifications') || '[]');
     const unread = mockNotifs
       .filter(n => n.email === email && n.status === 'Unread')
-      .map(n => ({ message: n.message, timestamp: n.timestamp }));
+      .map(n => ({ 
+        message: n.message, 
+        timestamp: n.timestamp,
+        originalFeedback: n.originalFeedback || "",
+        originalScreenshot: n.originalScreenshot || "",
+        originalTimestamp: n.originalTimestamp || ""
+      }));
       
-    return { registered: exists, blocked: false, notifications: unread };
+    return { 
+      registered: exists, 
+      blocked: false, 
+      notifications: unread,
+      mobile: existingUser?.mobile || "",
+      state: existingUser?.state || "",
+      district: existingUser?.district || "",
+      area: existingUser?.area || "",
+      pincode: existingUser?.pincode || ""
+    };
   }
 
   try {

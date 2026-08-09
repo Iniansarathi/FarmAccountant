@@ -39,6 +39,9 @@ export default function App() {
   const [editingExpense, setEditingExpense] = useState(null);
   const [editingHarvest, setEditingHarvest] = useState(null);
   const [activeNotification, setActiveNotification] = useState(null);
+  const [showProfileSetup, setShowProfileSetup] = useState(false);
+  const [profileForm, setProfileForm] = useState({ name: '', mobile: '', state: '', district: '', area: '', pincode: '' });
+  const [isSubmittingProfile, setIsSubmittingProfile] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState('');
@@ -239,8 +242,8 @@ export default function App() {
       
       const startTime = Date.now();
 
-      // Quick central check to see if they are blocked by the administrator or have notifications
-      if (user.type === 'google') {
+      // Quick central check to see if they are blocked by the administrator, have notifications, or need profile setup
+      if (user && user.email) {
         try {
           const checkRes = await checkUserRegistration(user.email);
           if (checkRes) {
@@ -256,6 +259,17 @@ export default function App() {
               if (active) {
                 setActiveNotification(checkRes.notifications[0]);
               }
+            }
+            // Check if profile setup is completed (centrally or locally)
+            const isLocalProfileSetup = localStorage.getItem(`farm_profile_setup_${user.email}`) === 'true';
+            if (!checkRes.mobile && !isLocalProfileSetup) {
+              if (active) {
+                setProfileForm(prev => ({ ...prev, name: user.name || '' }));
+                setShowProfileSetup(true);
+              }
+            } else if (checkRes.mobile) {
+              // Synchronize local storage state flag if centrally completed
+              localStorage.setItem(`farm_profile_setup_${user.email}`, 'true');
             }
           }
         } catch (err) {
@@ -829,6 +843,37 @@ export default function App() {
     }
   };
 
+  const handleProfileSubmit = async (e) => {
+    e.preventDefault();
+    if (!profileForm.name.trim() || !profileForm.mobile.trim() || !profileForm.state.trim() || !profileForm.district.trim() || !profileForm.area.trim() || !profileForm.pincode.trim()) {
+      alert("Please fill in all the profile details.");
+      return;
+    }
+    
+    setIsSubmittingProfile(true);
+    try {
+      // Send details centrally using heartbeat
+      await sendUserHeartbeat(user, googleToken, user.type === 'google', profileForm);
+      
+      // Save local flag
+      localStorage.setItem(`farm_profile_setup_${user.email}`, 'true');
+      
+      // Update user state if name changed
+      if (profileForm.name !== user.name) {
+        const updatedLocalUser = { ...user, name: profileForm.name };
+        setUser(updatedLocalUser);
+        localStorage.setItem('farm_user', JSON.stringify(updatedLocalUser));
+      }
+      
+      setShowProfileSetup(false);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to submit profile details: " + err.message);
+    } finally {
+      setIsSubmittingProfile(false);
+    }
+  };
+
   // If language is not selected yet for the session, show Language Selector overlay
   if (!isLanguageConfirmed) {
     return <LanguageSelector onConfirm={() => setIsLanguageConfirmed(true)} />;
@@ -1302,6 +1347,169 @@ export default function App() {
             >
               Got it, thanks!
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Unskippable Profile Setup Overlay */}
+      {showProfileSetup && (
+        <div className="fixed inset-0 z-[190] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 animate-fade-in text-left overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 max-w-md w-full border border-slate-150 dark:border-slate-800 shadow-2xl space-y-5 animate-scale-in my-8">
+            <div className="flex items-center gap-2.5 text-slate-850 dark:text-white border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="w-9 h-9 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-[#0C9D61] dark:text-emerald-450 flex items-center justify-center font-bold text-lg shadow-sm">
+                🌾
+              </div>
+              <div>
+                <h3 className="font-display font-extrabold text-sm tracking-tight m-0 leading-none">
+                  Farmer Profile Setup
+                </h3>
+                <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 mt-1 block uppercase tracking-wider">
+                  விவசாயி சுயவிவரம் / किसान प्रोफ़ाइल
+                </span>
+              </div>
+            </div>
+
+            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 leading-relaxed">
+              Please complete your profile to access your crop accounts dashboard. This is a one-time setup.
+              <span className="block mt-1 text-[9px] text-[#0C9D61] dark:text-emerald-450 font-bold">
+                (டாஷ்போர்டை அணுக உங்கள் சுயவிவரத்தை பூர்த்தி செய்யவும் / कृपया अपनी प्रोफ़ाइल पूरी करें)
+              </span>
+            </p>
+
+            <form onSubmit={handleProfileSubmit} className="space-y-3.5">
+              {/* Full Name */}
+              <div className="space-y-1">
+                <label className="text-[9px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
+                  Full Name / முழு பெயர் / पूरा नाम
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Ramesh Kumar"
+                  value={profileForm.name}
+                  onChange={(e) => setProfileForm(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 text-xs bg-slate-50 dark:bg-slate-950 text-slate-850 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all font-semibold"
+                />
+              </div>
+
+              {/* Mobile Number */}
+              <div className="space-y-1">
+                <label className="text-[9px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
+                  Mobile Number / கைபேசி எண் / मोबाइल नंबर
+                </label>
+                <input
+                  type="tel"
+                  required
+                  pattern="[0-9]{10}"
+                  maxLength={10}
+                  placeholder="e.g. 9876543210"
+                  value={profileForm.mobile}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '');
+                    setProfileForm(prev => ({ ...prev, mobile: val }));
+                  }}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 text-xs bg-slate-50 dark:bg-slate-950 text-slate-850 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all font-semibold"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3.5">
+                {/* State */}
+                <div className="space-y-1">
+                  <label className="text-[9px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
+                    State / மாநிலம் / राज्य
+                  </label>
+                  <select
+                    required
+                    value={profileForm.state}
+                    onChange={(e) => setProfileForm(prev => ({ ...prev, state: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 text-xs bg-slate-50 dark:bg-slate-950 text-slate-850 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all font-semibold"
+                  >
+                    <option value="" disabled>Select State</option>
+                    <option value="Tamil Nadu">Tamil Nadu (தமிழ்நாடு)</option>
+                    <option value="Andhra Pradesh">Andhra Pradesh</option>
+                    <option value="Karnataka">Karnataka (கர்நாடகா)</option>
+                    <option value="Kerala">Kerala (கேரளா)</option>
+                    <option value="Maharashtra">Maharashtra</option>
+                    <option value="Uttar Pradesh">Uttar Pradesh</option>
+                    <option value="Madhya Pradesh">Madhya Pradesh</option>
+                    <option value="Gujarat">Gujarat</option>
+                    <option value="Rajasthan">Rajasthan</option>
+                    <option value="Punjab">Punjab</option>
+                    <option value="Haryana">Haryana</option>
+                    <option value="Bihar">Bihar</option>
+                    <option value="West Bengal">West Bengal</option>
+                    <option value="Other">Other State</option>
+                  </select>
+                </div>
+
+                {/* District */}
+                <div className="space-y-1">
+                  <label className="text-[9px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
+                    District / மாவட்டம் / जिला
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Madurai"
+                    value={profileForm.district}
+                    onChange={(e) => setProfileForm(prev => ({ ...prev, district: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 text-xs bg-slate-50 dark:bg-slate-950 text-slate-850 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all font-semibold"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3.5">
+                {/* Area / Village */}
+                <div className="space-y-1">
+                  <label className="text-[9px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
+                    Area (Village) / பகுதி / गाँव
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Melur"
+                    value={profileForm.area}
+                    onChange={(e) => setProfileForm(prev => ({ ...prev, area: e.target.value }))}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 text-xs bg-slate-50 dark:bg-slate-950 text-slate-850 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all font-semibold"
+                  />
+                </div>
+
+                {/* Pincode */}
+                <div className="space-y-1">
+                  <label className="text-[9px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">
+                    Pincode / குறியீடு / पिनकोड
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    pattern="[0-9]{6}"
+                    maxLength={6}
+                    placeholder="e.g. 625106"
+                    value={profileForm.pincode}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, '');
+                      setProfileForm(prev => ({ ...prev, pincode: val }));
+                    }}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 text-xs bg-slate-50 dark:bg-slate-950 text-slate-850 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all font-semibold"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSubmittingProfile}
+                className="w-full mt-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-all cursor-pointer text-center shadow-md shadow-emerald-100 flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed hover-scale"
+              >
+                {isSubmittingProfile ? (
+                  <>
+                    <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                    <span>Saving Profile...</span>
+                  </>
+                ) : (
+                  <span>Save & Continue / சேமித்து தொடரவும்</span>
+                )}
+              </button>
+            </form>
           </div>
         </div>
       )}

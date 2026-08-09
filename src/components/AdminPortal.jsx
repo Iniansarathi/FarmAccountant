@@ -320,7 +320,19 @@ export default function AdminPortal({ googleToken, onBack, onLogout, theme, onTo
                                 {u.name.charAt(0).toUpperCase()}
                               </div>
                             )}
-                            <span className="font-semibold text-slate-700 dark:text-slate-200">{u.name}</span>
+                            <div className="flex flex-col">
+                              <span className="font-semibold text-slate-700 dark:text-slate-200 leading-tight">{u.name}</span>
+                              {u.mobile && (
+                                <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold mt-0.5">
+                                  📞 {u.mobile}
+                                </span>
+                              )}
+                              {u.state && (
+                                <span className="text-[9px] text-slate-450 dark:text-slate-500 font-medium mt-0.5 leading-normal">
+                                  📍 {u.area}, {u.district}, {u.state} - {u.pincode}
+                                </span>
+                              )}
+                            </div>
                           </td>
                           <td className="px-6 py-4 text-slate-500 dark:text-slate-400 font-medium">{u.email}</td>
                           <td className="px-6 py-4 text-center">
