@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Users, MessageSquare, Monitor, Calendar, Search, ArrowLeft, Image as ImageIcon, Trash2, LogOut, RefreshCw } from 'lucide-react';
-import { fetchAdminPortalData, approveDeletion } from '../services/adminApi';
+import { fetchAdminPortalData, approveDeletion, sendAdminNotification } from '../services/adminApi';
 
 export default function AdminPortal({ googleToken, onBack, onLogout, theme, onToggleTheme }) {
   const [activeTab, setActiveTab] = useState('users'); // 'users', 'feedbacks', 'deletions'
@@ -10,6 +10,27 @@ export default function AdminPortal({ googleToken, onBack, onLogout, theme, onTo
   const [searchQuery, setSearchQuery] = useState('');
   const [actionLoading, setActionLoading] = useState(null); // Track email being deleted
   const [selectedScreenshot, setSelectedScreenshot] = useState(null); // Lightbox image source
+  const [respondingFeedback, setRespondingFeedback] = useState(null); // Track feedback being replied to
+  const [responseMessage, setResponseMessage] = useState('');
+  const [isSendingResponse, setIsSendingResponse] = useState(false);
+
+  const handleSendResponse = async (e) => {
+    e.preventDefault();
+    if (!responseMessage.trim() || !respondingFeedback) return;
+    
+    setIsSendingResponse(true);
+    try {
+      await sendAdminNotification(respondingFeedback.email, responseMessage, googleToken);
+      alert(`Notification sent successfully to ${respondingFeedback.name || respondingFeedback.email}.`);
+      setRespondingFeedback(null);
+      setResponseMessage('');
+    } catch (err) {
+      console.error(err);
+      alert("Failed to send notification: " + err.message);
+    } finally {
+      setIsSendingResponse(false);
+    }
+  };
 
   const loadPortalData = useCallback(async () => {
     setLoading(true);
@@ -378,9 +399,18 @@ export default function AdminPortal({ googleToken, onBack, onLogout, theme, onTo
                       </div>
                     )}
 
-                    {/* Meta device specs */}
-                    <div className="text-[9px] text-slate-400 dark:text-slate-500 font-bold flex items-center gap-1 pt-1.5 border-t border-slate-50 dark:border-slate-850/80">
-                      <Monitor size={10} /> {f.device}
+                    {/* Meta device specs & Respond Action */}
+                    <div className="flex justify-between items-center pt-2 border-t border-slate-50 dark:border-slate-850/80">
+                      <div className="text-[9px] text-slate-400 dark:text-slate-500 font-bold flex items-center gap-1">
+                        <Monitor size={10} /> {f.device}
+                      </div>
+                      
+                      <button
+                        onClick={() => setRespondingFeedback(f)}
+                        className="px-2.5 py-1 rounded bg-[#0C9D61]/10 dark:bg-emerald-950/20 text-[#0C9D61] dark:text-emerald-450 hover:bg-[#0C9D61]/15 font-bold text-[10px] shadow-sm transition-all cursor-pointer inline-flex items-center gap-1 border border-emerald-100/30 dark:border-emerald-900/30"
+                      >
+                        <MessageSquare size={10} /> Respond to Farmer
+                      </button>
                     </div>
                   </div>
                 ))
@@ -452,6 +482,70 @@ export default function AdminPortal({ googleToken, onBack, onLogout, theme, onTo
             alt="Full size screenshot" 
             className="max-w-full max-h-[85vh] object-contain rounded-xl shadow-2xl border border-slate-800"
           />
+        </div>
+      )}
+
+      {/* Respond to Feedback Modal */}
+      {respondingFeedback && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl p-6 space-y-5 animate-scale-in relative text-left">
+            <button 
+              onClick={() => { setRespondingFeedback(null); setResponseMessage(''); }}
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-bold flex items-center justify-center cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+              title="Close modal"
+            >
+              ✕
+            </button>
+
+            <div className="space-y-1.5">
+              <h3 className="text-sm font-extrabold text-slate-850 dark:text-slate-100">Send Notification to Farmer</h3>
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold">REPLYING TO: {respondingFeedback.name} ({respondingFeedback.email})</p>
+            </div>
+
+            {/* Original Feedback Message */}
+            <div className="space-y-1 bg-slate-50 dark:bg-slate-950/20 p-3.5 rounded-2xl border border-slate-100 dark:border-slate-850/60 text-xs">
+              <span className="text-[9px] font-extrabold text-[#0C9D61] dark:text-emerald-450 uppercase tracking-wider block">Original Feedback Message</span>
+              <p className="text-slate-650 dark:text-slate-350 italic font-medium leading-relaxed">
+                "{respondingFeedback.message}"
+              </p>
+            </div>
+
+            {/* Form */}
+            <form onSubmit={handleSendResponse} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Your Response Message</label>
+                <textarea
+                  required
+                  value={responseMessage}
+                  onChange={(e) => setResponseMessage(e.target.value)}
+                  placeholder="Type your resolution notification here (e.g., We have fixed the sowing bug, please reload the app!)..."
+                  rows={4}
+                  className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-800 text-xs bg-slate-50 dark:bg-slate-950 text-slate-850 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all font-medium leading-relaxed"
+                />
+              </div>
+
+              <div className="flex gap-3 justify-end pt-2">
+                <button
+                  type="button"
+                  onClick={() => { setRespondingFeedback(null); setResponseMessage(''); }}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 dark:text-slate-450 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSendingResponse || !responseMessage.trim()}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold text-white shadow-md cursor-pointer transition-all ${
+                    isSendingResponse || !responseMessage.trim()
+                      ? 'bg-slate-300 dark:bg-slate-800 text-slate-500 dark:text-slate-600 cursor-not-allowed'
+                      : 'bg-emerald-600 hover:bg-emerald-700 hover-scale'
+                  }`}
+                >
+                  {isSendingResponse ? "Sending..." : "Send Notification"}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

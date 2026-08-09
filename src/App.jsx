@@ -19,7 +19,7 @@ import LanguageSelector from './components/LanguageSelector';
 // Services
 import { initGoogleOAuth, fetchGoogleUserInfo, getStoredGoogleToken, clearAuthSession, requestGoogleToken, registerPasswordForGoogleUser, revokeGoogleToken } from './services/auth';
 import { loadUserData, saveUserData } from './services/storage';
-import { submitUserFeedback, sendUserHeartbeat, requestDeletion, checkUserRegistration } from './services/adminApi';
+import { submitUserFeedback, sendUserHeartbeat, requestDeletion, checkUserRegistration, markNotificationRead } from './services/adminApi';
 
 export default function App() {
   const { t } = useTranslation();
@@ -38,6 +38,7 @@ export default function App() {
   const [editingCrop, setEditingCrop] = useState(null);
   const [editingExpense, setEditingExpense] = useState(null);
   const [editingHarvest, setEditingHarvest] = useState(null);
+  const [activeNotification, setActiveNotification] = useState(null);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState('');
@@ -238,16 +239,24 @@ export default function App() {
       
       const startTime = Date.now();
 
-      // Quick central check to see if they are blocked by the administrator
+      // Quick central check to see if they are blocked by the administrator or have notifications
       if (user.type === 'google') {
         try {
           const checkRes = await checkUserRegistration(user.email);
-          if (checkRes && checkRes.blocked === true) {
-            if (active) {
-              const targetFileId = localStorage.getItem('google_drive_file_id') || null;
-              await performRemoteWipe(user, targetFileId, googleToken);
+          if (checkRes) {
+            if (checkRes.blocked === true) {
+              if (active) {
+                const targetFileId = localStorage.getItem('google_drive_file_id') || null;
+                await performRemoteWipe(user, targetFileId, googleToken);
+              }
+              return;
             }
-            return;
+            // If they have unread notifications from the admin, load the first one
+            if (checkRes.notifications && checkRes.notifications.length > 0) {
+              if (active) {
+                setActiveNotification(checkRes.notifications[0]);
+              }
+            }
           }
         } catch (err) {
           console.warn("Failed central block check on startup", err);
@@ -1211,6 +1220,48 @@ export default function App() {
                 </div>
               </form>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Administrator Notification Modal Popup */}
+      {activeNotification && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-fade-in text-left">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 max-w-sm w-full border border-slate-150 dark:border-slate-800 shadow-2xl space-y-4 animate-scale-in">
+            <div className="flex items-center gap-2.5 text-slate-850 dark:text-white">
+              <div className="w-8 h-8 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-[#0C9D61] dark:text-emerald-450 flex items-center justify-center font-bold text-base shadow-sm">
+                📢
+              </div>
+              <div>
+                <h3 className="font-display font-extrabold text-sm tracking-tight m-0 leading-none">
+                  Message from Admin
+                </h3>
+                <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 mt-1 block uppercase tracking-wider">
+                  நிர்வாகியிடமிருந்து செய்தி / संदेश
+                </span>
+              </div>
+            </div>
+
+            <p className="text-xs font-semibold text-slate-650 dark:text-slate-350 leading-relaxed bg-slate-50/50 dark:bg-slate-950/20 p-4 rounded-2xl border border-slate-100 dark:border-slate-850/80 italic shadow-inner">
+              "{activeNotification.message}"
+            </p>
+
+            <button
+              onClick={async () => {
+                const notif = activeNotification;
+                setActiveNotification(null); // Dismiss immediately in UI
+                if (user && user.email) {
+                  try {
+                    await markNotificationRead(user.email, notif.timestamp);
+                  } catch (err) {
+                    console.error("Failed to dismiss notification centrally:", err);
+                  }
+                }
+              }}
+              className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-all cursor-pointer text-center shadow-md shadow-emerald-100 hover-scale"
+            >
+              Got it, thanks!
+            </button>
           </div>
         </div>
       )}

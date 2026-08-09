@@ -144,7 +144,14 @@ export async function checkUserRegistration(email) {
   if (!url) {
     const localUsers = JSON.parse(localStorage.getItem('farm_mock_registered_users') || '[]');
     const exists = localUsers.some(u => u.email === email);
-    return { registered: exists };
+    
+    // Fetch mock notifications
+    const mockNotifs = JSON.parse(localStorage.getItem('farm_mock_notifications') || '[]');
+    const unread = mockNotifs
+      .filter(n => n.email === email && n.status === 'Unread')
+      .map(n => ({ message: n.message, timestamp: n.timestamp }));
+      
+    return { registered: exists, blocked: false, notifications: unread };
   }
 
   try {
@@ -225,6 +232,72 @@ export async function approveDeletion(targetEmail, googleToken) {
 
   if (!response.ok) {
     throw new Error("Failed to approve deletion request");
+  }
+
+  return await response.json();
+}
+
+// Send a customer support notification to a user (Admin only)
+export async function sendAdminNotification(targetEmail, message, googleToken) {
+  const url = getApiUrl();
+  if (!url) {
+    // Simulated Sandbox
+    const mockNotifs = JSON.parse(localStorage.getItem('farm_mock_notifications') || '[]');
+    mockNotifs.push({ email: targetEmail, message, status: 'Unread', timestamp: new Date().toISOString() });
+    localStorage.setItem('farm_mock_notifications', JSON.stringify(mockNotifs));
+    return { success: true, isMock: true };
+  }
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'text/plain;charset=utf-8'
+    },
+    body: JSON.stringify({
+      action: 'sendNotification',
+      email: targetEmail,
+      message: message,
+      token: googleToken
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to send admin notification");
+  }
+
+  return await response.json();
+}
+
+// Mark user notification as read
+export async function markNotificationRead(email, timestamp) {
+  const url = getApiUrl();
+  if (!url) {
+    // Simulated Sandbox
+    let mockNotifs = JSON.parse(localStorage.getItem('farm_mock_notifications') || '[]');
+    mockNotifs = mockNotifs.map(n => {
+      if (n.email === email && n.timestamp === timestamp) {
+        return { ...n, status: 'Read' };
+      }
+      return n;
+    });
+    localStorage.setItem('farm_mock_notifications', JSON.stringify(mockNotifs));
+    return { success: true, isMock: true };
+  }
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'text/plain;charset=utf-8'
+    },
+    body: JSON.stringify({
+      action: 'markNotificationRead',
+      email: email,
+      timestamp: timestamp
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to mark notification as read");
   }
 
   return await response.json();
