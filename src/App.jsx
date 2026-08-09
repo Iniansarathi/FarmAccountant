@@ -122,10 +122,15 @@ export default function App() {
         } else if (parsedUser.isMock) {
           setSyncStatus('synced');
         } else {
-          // Token expired, clear expired user session so they re-authenticate and sync fresh
-          setUser(null);
-          localStorage.removeItem('farm_current_user');
+          // Token expired, but do NOT clear the session!
+          // Run in local/cached mode first and trigger silent re-authentication in the background
+          setGoogleToken(null);
           setSyncStatus('local');
+          
+          // Request a new token silently in the background using their email
+          setTimeout(() => {
+            requestGoogleToken(false, parsedUser.email);
+          }, 1000);
         }
       } else {
         setSyncStatus('local');

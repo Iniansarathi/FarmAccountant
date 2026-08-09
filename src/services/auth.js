@@ -68,7 +68,7 @@ export function initGoogleOAuth(onTokenReceived, onError) {
   checkAndInit();
 }
 
-export function requestGoogleToken(forceConsent = false) {
+export function requestGoogleToken(forceConsent = false, emailHint = '') {
   if (!window.google || !window.google.accounts || !tokenClient) {
     console.warn("Google client script blocked or uninitialized. Falling back to direct OAuth redirect.");
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "336829707172-mockclientid.apps.googleusercontent.com";
@@ -77,12 +77,25 @@ export function requestGoogleToken(forceConsent = false) {
     const responseType = 'token';
     const state = 'google_oauth_fallback';
     
-    const oauthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=${responseType}&scope=${scope}&state=${state}`;
+    let oauthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=${responseType}&scope=${scope}&state=${state}`;
+    if (emailHint) {
+      oauthUrl += `&login_hint=${encodeURIComponent(emailHint)}`;
+    }
     window.location.href = oauthUrl;
     return;
   }
-  const promptValue = forceConsent ? 'consent select_account' : 'select_account';
-  tokenClient.requestAccessToken({ prompt: promptValue });
+  
+  const options = {};
+  if (forceConsent) {
+    options.prompt = 'consent select_account';
+  } else if (emailHint) {
+    options.prompt = '';
+    options.login_hint = emailHint;
+  } else {
+    options.prompt = 'select_account';
+  }
+  
+  tokenClient.requestAccessToken(options);
 }
 
 export async function fetchGoogleUserInfo(accessToken) {
