@@ -698,9 +698,6 @@ export default function App() {
             setSelectedCropId={setSelectedCropId}
             syncStatus={syncStatus}
             user={user}
-            onTriggerInstall={handleTriggerInstall}
-            deferredPrompt={deferredPrompt}
-            onShowIOSInstallGuide={() => setShowIOSInstallGuide(true)}
           />
         );
       case 'crop_form':

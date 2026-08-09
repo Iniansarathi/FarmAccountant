@@ -7,10 +7,7 @@ export default function Dashboard({
   onNavigate, 
   setSelectedCropId,
   syncStatus,
-  user,
-  onTriggerInstall,
-  deferredPrompt,
-  onShowIOSInstallGuide
+  user
 }) {
   const { t } = useTranslation();
 
@@ -29,23 +26,6 @@ export default function Dashboard({
   
   const netProfit = totalRevenue - concludedCropsInvestment;
 
-  const isStandalone = typeof window !== 'undefined' && (
-    window.matchMedia('(display-mode: standalone)').matches || 
-    window.navigator.standalone
-  );
-
-  const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-
-  const handleInstallClick = () => {
-    if (isIOS) {
-      onShowIOSInstallGuide();
-    } else if (deferredPrompt) {
-      onTriggerInstall();
-    } else {
-      alert(t('pwa.manual_instructions'));
-    }
-  };
-
   // Calculate expenses per active crop for dashboard list
   const getCropExpenses = (cropId) => {
     return data.expenses
@@ -60,27 +40,6 @@ export default function Dashboard({
 
   return (
     <div className="flex-1 px-4 py-6 sm:px-6 space-y-6 max-w-4xl mx-auto w-full">
-      
-      {/* PWA Install Callout Banner */}
-      {!isStandalone && (
-        <div className="bg-emerald-50 border border-emerald-250 rounded-2xl p-5 text-sm text-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm border-emerald-150 animate-scale-in text-left">
-          <div className="flex items-start gap-3">
-            <span className="text-2xl shrink-0">📲</span>
-            <div>
-              <h4 className="font-bold text-slate-800 text-sm mb-0.5">{t('pwa.title')}</h4>
-              <p className="text-xs text-slate-500 leading-relaxed">
-                {t('pwa.desc')}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={handleInstallClick}
-            className="shrink-0 px-4 py-2 bg-[#0C9D61] hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer hover-scale hover-scale-active text-center"
-          >
-            {t('pwa.btn')}
-          </button>
-        </div>
-      )}
       
       {/* Google Drive Access Warning Callout */}
       {user?.type === 'google' && syncStatus === 'error' && (
