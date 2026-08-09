@@ -15,6 +15,7 @@ import CropDetails from './components/CropDetails';
 import Analytics from './components/Analytics';
 import AdminPortal from './components/AdminPortal';
 import LanguageSelector from './components/LanguageSelector';
+import InstallOverlay from './components/InstallOverlay';
 
 // Services
 import { initGoogleOAuth, fetchGoogleUserInfo, getStoredGoogleToken, clearAuthSession, requestGoogleToken, registerPasswordForGoogleUser, revokeGoogleToken } from './services/auth';
@@ -40,6 +41,8 @@ export default function App() {
   const [editingHarvest, setEditingHarvest] = useState(null);
   const [activeNotification, setActiveNotification] = useState(null);
   const [showProfileSetup, setShowProfileSetup] = useState(false);
+  const [hasSkippedInstall, setHasSkippedInstall] = useState(false);
+  const [isSuccessfullyInstalled, setIsSuccessfullyInstalled] = useState(false);
   const [profileForm, setProfileForm] = useState({ name: '', mobile: '', state: '', district: '', area: '', pincode: '' });
   const [isSubmittingProfile, setIsSubmittingProfile] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
@@ -953,6 +956,22 @@ export default function App() {
           </div>
         </div>
       </div>
+    );
+  }
+
+  // PWA Install Overlay (if in browser mode and hasn't skipped yet)
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  const showInstallOverlay = user && !isStandalone && !hasSkippedInstall && !showProfileSetup && onboardingState === 'idle';
+
+  if (showInstallOverlay) {
+    return (
+      <InstallOverlay 
+        onSkip={() => setHasSkippedInstall(true)} 
+        deferredPrompt={deferredPrompt}
+        setDeferredPrompt={setDeferredPrompt}
+        isSuccessfullyInstalled={isSuccessfullyInstalled}
+        setIsSuccessfullyInstalled={setIsSuccessfullyInstalled}
+      />
     );
   }
 
