@@ -238,12 +238,18 @@ export async function approveDeletion(targetEmail, googleToken) {
 }
 
 // Send a customer support notification to a user (Admin only)
-export async function sendAdminNotification(targetEmail, message, googleToken) {
+export async function sendAdminNotification(targetEmail, message, originalFeedback, googleToken) {
   const url = getApiUrl();
   if (!url) {
     // Simulated Sandbox
     const mockNotifs = JSON.parse(localStorage.getItem('farm_mock_notifications') || '[]');
-    mockNotifs.push({ email: targetEmail, message, status: 'Unread', timestamp: new Date().toISOString() });
+    mockNotifs.push({ 
+      email: targetEmail, 
+      message, 
+      originalFeedback,
+      status: 'Unread', 
+      timestamp: new Date().toISOString() 
+    });
     localStorage.setItem('farm_mock_notifications', JSON.stringify(mockNotifs));
     return { success: true, isMock: true };
   }
@@ -257,6 +263,7 @@ export async function sendAdminNotification(targetEmail, message, googleToken) {
       action: 'sendNotification',
       email: targetEmail,
       message: message,
+      originalFeedback: originalFeedback,
       token: googleToken
     })
   });

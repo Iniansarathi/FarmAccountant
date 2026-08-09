@@ -1242,9 +1242,19 @@ export default function App() {
               </div>
             </div>
 
-            <p className="text-xs font-semibold text-slate-650 dark:text-slate-350 leading-relaxed bg-slate-50/50 dark:bg-slate-950/20 p-4 rounded-2xl border border-slate-100 dark:border-slate-850/80 italic shadow-inner">
-              "{activeNotification.message}"
-            </p>
+            {activeNotification.originalFeedback && (
+              <div className="space-y-1 bg-slate-50 dark:bg-slate-950/20 p-3 rounded-xl border border-slate-150 dark:border-slate-850/60 text-[11px] font-medium text-slate-500 dark:text-slate-405">
+                <span className="text-[9px] font-bold text-[#0C9D61] dark:text-emerald-450 uppercase tracking-wider block">Your Feedback / உங்கள் கருத்து / आपका फ़ीडबैक:</span>
+                <p className="italic leading-normal text-slate-600 dark:text-slate-350">"{activeNotification.originalFeedback}"</p>
+              </div>
+            )}
+
+            <div className="space-y-1 text-slate-800 dark:text-white">
+              <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Response / பதில் / उत्तर:</span>
+              <p className="text-xs font-semibold leading-relaxed bg-emerald-50/30 dark:bg-emerald-950/10 p-3.5 rounded-xl border border-emerald-100/30 dark:border-emerald-900/20 italic">
+                "{activeNotification.message}"
+              </p>
+            </div>
 
             <button
               onClick={async () => {

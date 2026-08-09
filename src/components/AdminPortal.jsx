@@ -20,7 +20,7 @@ export default function AdminPortal({ googleToken, onBack, onLogout, theme, onTo
     
     setIsSendingResponse(true);
     try {
-      await sendAdminNotification(respondingFeedback.email, responseMessage, googleToken);
+      await sendAdminNotification(respondingFeedback.email, responseMessage, respondingFeedback.message, googleToken);
       alert(`Notification sent successfully to ${respondingFeedback.name || respondingFeedback.email}.`);
       setRespondingFeedback(null);
       setResponseMessage('');

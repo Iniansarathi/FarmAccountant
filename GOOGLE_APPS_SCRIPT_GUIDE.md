@@ -33,6 +33,7 @@ function doPost(e) {
     var usersSheet = ss.getSheetByName("Users") || ss.insertSheet("Users");
     var deletionSheet = ss.getSheetByName("DeletionRequests") || ss.insertSheet("DeletionRequests");
     var blockedSheet = ss.getSheetByName("BlockedUsers") || ss.insertSheet("BlockedUsers");
+    var notificationsSheet = ss.getSheetByName("Notifications") || ss.insertSheet("Notifications");
     
     // Create headers if empty
     if (feedbackSheet.getLastRow() === 0) {
@@ -46,6 +47,9 @@ function doPost(e) {
     }
     if (blockedSheet.getLastRow() === 0) {
       blockedSheet.appendRow(["Email", "BlockedAt"]);
+    }
+    if (notificationsSheet.getLastRow() === 0) {
+      notificationsSheet.appendRow(["Email", "Message", "Status", "Timestamp", "OriginalFeedback"]);
     }
     
     if (action === "registerUser") {
@@ -125,7 +129,7 @@ function doPost(e) {
       // Get unread notifications
       var notificationsSheet = ss.getSheetByName("Notifications") || ss.insertSheet("Notifications");
       if (notificationsSheet.getLastRow() === 0) {
-        notificationsSheet.appendRow(["Email", "Message", "Status", "Timestamp"]);
+        notificationsSheet.appendRow(["Email", "Message", "Status", "Timestamp", "OriginalFeedback"]);
       }
       var notifRows = notificationsSheet.getDataRange().getValues();
       var unreadNotifications = [];
@@ -133,7 +137,8 @@ function doPost(e) {
         if (notifRows[i][0] === email && notifRows[i][2] === "Unread") {
           unreadNotifications.push({
             message: notifRows[i][1],
-            timestamp: notifRows[i][3]
+            timestamp: notifRows[i][3],
+            originalFeedback: notifRows[i][4] || ""
           });
         }
       }
@@ -252,10 +257,11 @@ function doPost(e) {
       
       var notificationsSheet = ss.getSheetByName("Notifications") || ss.insertSheet("Notifications");
       if (notificationsSheet.getLastRow() === 0) {
-        notificationsSheet.appendRow(["Email", "Message", "Status", "Timestamp"]);
+        notificationsSheet.appendRow(["Email", "Message", "Status", "Timestamp", "OriginalFeedback"]);
       }
       
-      notificationsSheet.appendRow([targetEmail, message, "Unread", new Date().toISOString()]);
+      var originalFeedback = data.originalFeedback || "";
+      notificationsSheet.appendRow([targetEmail, message, "Unread", new Date().toISOString(), originalFeedback]);
       JSON_RESPONSE = { success: true };
       
     } else if (action === "markNotificationRead") {
