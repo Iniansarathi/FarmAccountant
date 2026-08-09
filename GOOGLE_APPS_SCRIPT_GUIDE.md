@@ -30,6 +30,7 @@ function doPost(e) {
     var feedbackSheet = ss.getSheetByName("Feedback") || ss.insertSheet("Feedback");
     var usersSheet = ss.getSheetByName("Users") || ss.insertSheet("Users");
     var deletionSheet = ss.getSheetByName("DeletionRequests") || ss.insertSheet("DeletionRequests");
+    var blockedSheet = ss.getSheetByName("BlockedUsers") || ss.insertSheet("BlockedUsers");
     
     // Create headers if empty
     if (feedbackSheet.getLastRow() === 0) {
@@ -41,6 +42,9 @@ function doPost(e) {
     if (deletionSheet.getLastRow() === 0) {
       deletionSheet.appendRow(["Email", "Name", "Timestamp"]);
     }
+    if (blockedSheet.getLastRow() === 0) {
+      blockedSheet.appendRow(["Email", "BlockedAt"]);
+    }
     
     if (action === "registerUser") {
       var email = data.email;
@@ -48,6 +52,21 @@ function doPost(e) {
       var picture = data.picture || "";
       var lastLogin = new Date().toISOString();
       var hasDrivePermission = data.hasDrivePermission ? "Yes" : "No";
+      
+      // Check if user is blocked
+      var blockedRows = blockedSheet.getDataRange().getValues();
+      var isBlocked = false;
+      for (var i = 1; i < blockedRows.length; i++) {
+        if (blockedRows[i][0] === email) {
+          isBlocked = true;
+          break;
+        }
+      }
+      
+      if (isBlocked) {
+        return ContentService.createTextOutput(JSON.stringify({ success: false, blocked: true }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
       
       var userRows = usersSheet.getDataRange().getValues();
       var foundIndex = -1;
@@ -81,6 +100,17 @@ function doPost(e) {
       
     } else if (action === "checkUser") {
       var email = data.email;
+      
+      // Check if user is blocked
+      var blockedRows = blockedSheet.getDataRange().getValues();
+      var isBlocked = false;
+      for (var i = 1; i < blockedRows.length; i++) {
+        if (blockedRows[i][0] === email) {
+          isBlocked = true;
+          break;
+        }
+      }
+      
       var userRows = usersSheet.getDataRange().getValues();
       var exists = false;
       for (var i = 1; i < userRows.length; i++) {
@@ -89,7 +119,7 @@ function doPost(e) {
           break;
         }
       }
-      JSON_RESPONSE = { registered: exists };
+      JSON_RESPONSE = { registered: exists, blocked: isBlocked };
       
     } else if (action === "requestDeletion") {
       var email = data.email;
@@ -154,6 +184,19 @@ function doPost(e) {
         if (requestRows[i][0] === targetEmail) {
           deletionSheet.deleteRow(i + 1);
         }
+      }
+      
+      // Add to Blocked list to prevent re-registration and enforce remote wipe
+      var blockedRows = blockedSheet.getDataRange().getValues();
+      var alreadyBlocked = false;
+      for (var i = 1; i < blockedRows.length; i++) {
+        if (blockedRows[i][0] === targetEmail) {
+          alreadyBlocked = true;
+          break;
+        }
+      }
+      if (!alreadyBlocked) {
+        blockedSheet.appendRow([targetEmail, new Date().toISOString()]);
       }
       
       JSON_RESPONSE = { success: true };

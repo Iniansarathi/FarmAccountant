@@ -25,11 +25,11 @@ export async function sendUserHeartbeat(user, googleToken, hasDrivePermission = 
       localUsers.push(updatedUser);
     }
     localStorage.setItem('farm_mock_registered_users', JSON.stringify(localUsers));
-    return;
+    return { success: true, isMock: true };
   }
 
   try {
-    await fetch(url, {
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'text/plain;charset=utf-8'
@@ -43,9 +43,13 @@ export async function sendUserHeartbeat(user, googleToken, hasDrivePermission = 
         hasDrivePermission: hasDrivePermission
       })
     });
+    if (response.ok) {
+      return await response.json();
+    }
   } catch (err) {
     console.error("Heartbeat sync error:", err);
   }
+  return null;
 }
 
 // Submit feedback with screenshot and text

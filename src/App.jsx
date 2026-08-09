@@ -19,7 +19,7 @@ import LanguageSelector from './components/LanguageSelector';
 // Services
 import { initGoogleOAuth, fetchGoogleUserInfo, getStoredGoogleToken, clearAuthSession, requestGoogleToken, registerPasswordForGoogleUser, revokeGoogleToken } from './services/auth';
 import { loadUserData, saveUserData } from './services/storage';
-import { submitUserFeedback, sendUserHeartbeat, requestDeletion } from './services/adminApi';
+import { submitUserFeedback, sendUserHeartbeat, requestDeletion, checkUserRegistration } from './services/adminApi';
 
 export default function App() {
   const { t } = useTranslation();
@@ -238,6 +238,22 @@ export default function App() {
       
       const startTime = Date.now();
 
+      // Quick central check to see if they are blocked by the administrator
+      if (user.type === 'google') {
+        try {
+          const checkRes = await checkUserRegistration(user.email);
+          if (checkRes && checkRes.blocked === true) {
+            if (active) {
+              const targetFileId = localStorage.getItem('google_drive_file_id') || null;
+              await performRemoteWipe(user, targetFileId, googleToken);
+            }
+            return;
+          }
+        } catch (err) {
+          console.warn("Failed central block check on startup", err);
+        }
+      }
+
       try {
         const loaded = await loadUserData(user, googleToken);
         if (!active) return;
@@ -249,7 +265,11 @@ export default function App() {
           if (!isRegistered) {
             // New user registration flow with permission denied
             if (user.type === 'google' && googleToken) {
-              await sendUserHeartbeat(user, googleToken, false);
+              const res = await sendUserHeartbeat(user, googleToken, false);
+              if (res && res.blocked === true) {
+                if (active) await performRemoteWipe(user, null, googleToken);
+                return;
+              }
             }
             if (active) setOnboardingState('registering');
             
@@ -281,7 +301,11 @@ export default function App() {
           // New User Registration Flow (permissions granted)
           // 1. Send registration heartbeat centrally
           if (user.type === 'google' && googleToken) {
-            await sendUserHeartbeat(user, googleToken, true);
+            const res = await sendUserHeartbeat(user, googleToken, true);
+            if (res && res.blocked === true) {
+              if (active) await performRemoteWipe(user, null, googleToken);
+              return;
+            }
           }
           if (active) setOnboardingState('registering');
           
@@ -308,6 +332,17 @@ export default function App() {
           setSyncStatus(user.type === 'google' ? 'synced' : 'local');
           localStorage.setItem(`farm_registered_${user.email}`, 'true'); // Flag existing user locally
           setOnboardingState('idle');
+
+          // Send background heartbeat to ensure early users are registered in Admin Portal
+          if (user.type === 'google' && googleToken) {
+            sendUserHeartbeat(user, googleToken, true)
+              .then(res => {
+                if (res && res.blocked === true) {
+                  performRemoteWipe(user, loaded.fileId, googleToken);
+                }
+              })
+              .catch(err => console.warn("Background heartbeat failed:", err));
+          }
         }
       } catch (err) {
         if (!active) return;
@@ -339,6 +374,46 @@ export default function App() {
       console.error("Sync save failed:", err);
       setSyncStatus(user.type === 'google' ? 'unsaved' : 'local');
     }
+  };
+
+  const performRemoteWipe = async (targetUser, targetFileId, targetToken) => {
+    // 1. Delete backup database file from Drive if possible
+    if (targetFileId && targetToken) {
+      try {
+        await fetch(`https://www.googleapis.com/drive/v3/files/${targetFileId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${targetToken}` }
+        });
+      } catch (err) {
+        console.error("Failed to delete remote file during wipe:", err);
+      }
+    }
+    
+    // 2. Revoke Google OAuth token
+    if (targetToken) {
+      try {
+        await revokeGoogleToken(targetToken);
+      } catch (err) {
+        console.error("Failed to revoke token during wipe:", err);
+      }
+    }
+    
+    // 3. Clear local storage and state
+    localStorage.removeItem(`farm_data_google_${targetUser.email}`);
+    localStorage.removeItem(`farm_registered_${targetUser.email}`);
+    localStorage.removeItem('google_drive_file_id');
+    localStorage.removeItem('farm_current_user');
+    
+    // Clear React Auth Session
+    clearAuthSession();
+    setUser(null);
+    setData({ crops: [], expenses: [], harvests: [] });
+    setGoogleToken(null);
+    setFileId(null);
+    setOnboardingState('idle');
+    setCurrentView('dashboard');
+    
+    alert("Your account has been deleted by the administrator. All data has been wiped.");
   };
 
   // Auth Operations

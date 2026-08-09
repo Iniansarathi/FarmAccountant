@@ -56,12 +56,17 @@ export default function AdminPortal({ googleToken, onBack, onLogout, theme, onTo
            name.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
-  const handleApproveDelete = async (email) => {
-    if (!window.confirm(`Are you sure you want to approve deletion for ${email}? This will centrally clear their profile registration.`)) return;
+  const handleDeleteUser = async (email, isFromPendingRequest = false) => {
+    const confirmMsg = isFromPendingRequest
+      ? `Are you sure you want to approve deletion for ${email}? This will centrally clear their profile registration.`
+      : `Are you sure you want to permanently delete the farmer account for ${email}? This will wipe their central database registration row, and trigger an automatic local wipe when they next connect.`;
+      
+    if (!window.confirm(confirmMsg)) return;
+    
     setActionLoading(email);
     try {
       await approveDeletion(email, googleToken);
-      alert(`Account deletion successfully approved for ${email}.`);
+      alert(`Account ${email} has been successfully deleted centrally.`);
       
       setData(prev => ({
         ...prev,
@@ -73,7 +78,7 @@ export default function AdminPortal({ googleToken, onBack, onLogout, theme, onTo
       }));
     } catch (err) {
       console.error(err);
-      alert("Failed to approve deletion: " + err.message);
+      alert("Failed to delete account: " + err.message);
     } finally {
       setActionLoading(null);
     }
@@ -270,12 +275,13 @@ export default function AdminPortal({ googleToken, onBack, onLogout, theme, onTo
                       <th className="px-6 py-3.5">Email Address</th>
                       <th className="px-6 py-3.5 text-center">Drive Sync Permission</th>
                       <th className="px-6 py-3.5 text-right">Last Sync Timestamp</th>
+                      <th className="px-6 py-3.5 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50 dark:divide-slate-800/60 text-xs">
                     {filteredUsers.length === 0 ? (
                       <tr>
-                        <td colSpan={4} className="px-6 py-8 text-center text-slate-400 dark:text-slate-500 italic">No registered farmers found matching query.</td>
+                        <td colSpan={5} className="px-6 py-8 text-center text-slate-400 dark:text-slate-500 italic">No registered farmers found matching query.</td>
                       </tr>
                     ) : (
                       filteredUsers.map((u, idx) => (
@@ -308,6 +314,16 @@ export default function AdminPortal({ googleToken, onBack, onLogout, theme, onTo
                             )}
                           </td>
                           <td className="px-6 py-4 text-right text-slate-400 dark:text-slate-500 font-semibold">{formatDate(u.lastLogin)}</td>
+                          <td className="px-6 py-4 text-right">
+                            <button
+                              disabled={actionLoading === u.email}
+                              onClick={() => handleDeleteUser(u.email, false)}
+                              className="p-1.5 rounded-lg text-rose-600 dark:text-rose-450 hover:bg-rose-50 dark:hover:bg-rose-950/20 disabled:opacity-55 transition-colors cursor-pointer inline-flex items-center justify-center border border-transparent hover:border-rose-100 dark:hover:border-rose-900/30 shadow-sm"
+                              title="Delete Farmer Centrally"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </td>
                         </tr>
                       ))
                     )}
@@ -399,7 +415,7 @@ export default function AdminPortal({ googleToken, onBack, onLogout, theme, onTo
                             <td className="px-6 py-4 text-right">
                               <button
                                 disabled={isDeleting}
-                                onClick={() => handleApproveDelete(email)}
+                                onClick={() => handleDeleteUser(email, true)}
                                 className={`px-3 py-1.5 rounded-lg font-bold text-[10px] shadow-sm transition-all cursor-pointer ${
                                   isDeleting 
                                     ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-200 dark:border-slate-700' 
