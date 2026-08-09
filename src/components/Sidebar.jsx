@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { X, LogOut, User, Cloud, RefreshCw, Layers, ShieldCheck, Smartphone } from 'lucide-react';
+import { APP_VERSION } from '../config/version';
 
 export default function Sidebar({ 
   isOpen, 
@@ -216,7 +217,7 @@ export default function Sidebar({
 
         {/* Footer Logout Option */}
         <div className="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
-          <span className="text-[9px] text-slate-400 font-semibold">farmaccountant v1.0</span>
+          <span className="text-[9px] text-slate-400 font-semibold">farmaccountant v{APP_VERSION}</span>
           <button
             onClick={() => { onLogout(); onClose(); }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-rose-200 bg-white text-rose-600 hover:bg-rose-50 text-[10px] font-bold hover-scale hover-scale-active transition-all cursor-pointer shadow-sm"
