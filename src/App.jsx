@@ -889,15 +889,6 @@ export default function App() {
     return <Login />;
   }
 
-  // If Google user is authenticated but token is not set yet, show initial loading screen (prevents home page flash)
-  if (user && user.type === 'google' && !googleToken) {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-50 dark:bg-slate-950 p-4 transition-colors">
-        <div className="w-12 h-12 border-4 border-[#0C9D61] border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
-  }
-
   // Onboarding registration / sync diagnosis overlay
   if (onboardingState !== 'idle') {
     return (
