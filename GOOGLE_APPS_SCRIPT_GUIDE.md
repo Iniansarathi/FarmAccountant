@@ -7,9 +7,11 @@ This guide explains how to set up the free Google Sheets database to store user 
 ## Step 1: Create a Google Spreadsheet
 1. Open [Google Sheets](https://sheets.google.com) and click **Start a new spreadsheet**.
 2. Name the spreadsheet **`FarmAccountantAdminData`**.
-3. Create two sheets (tabs) inside:
+3. Create four sheets (tabs) inside:
    - Name the first tab: **`Users`**
    - Name the second tab: **`Feedback`**
+   - Name the third tab: **`BlockedUsers`**
+   - Name the fourth tab: **`Notifications`**
 
 ---
 
@@ -119,7 +121,24 @@ function doPost(e) {
           break;
         }
       }
-      JSON_RESPONSE = { registered: exists, blocked: isBlocked };
+      
+      // Get unread notifications
+      var notificationsSheet = ss.getSheetByName("Notifications") || ss.insertSheet("Notifications");
+      if (notificationsSheet.getLastRow() === 0) {
+        notificationsSheet.appendRow(["Email", "Message", "Status", "Timestamp"]);
+      }
+      var notifRows = notificationsSheet.getDataRange().getValues();
+      var unreadNotifications = [];
+      for (var i = 1; i < notifRows.length; i++) {
+        if (notifRows[i][0] === email && notifRows[i][2] === "Unread") {
+          unreadNotifications.push({
+            message: notifRows[i][1],
+            timestamp: notifRows[i][3]
+          });
+        }
+      }
+      
+      JSON_RESPONSE = { registered: exists, blocked: isBlocked, notifications: unreadNotifications };
       
     } else if (action === "requestDeletion") {
       var email = data.email;
@@ -199,6 +218,59 @@ function doPost(e) {
         blockedSheet.appendRow([targetEmail, new Date().toISOString()]);
       }
       
+      JSON_RESPONSE = { success: true };
+      
+    } else if (action === "sendNotification") {
+      var targetEmail = data.email;
+      var message = data.message;
+      var token = data.token;
+      
+      if (!token) {
+        return ContentService.createTextOutput(JSON.stringify({ error: "Missing authorization token" }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      
+      // Verify email via Google Token Info
+      var verifyUrl = "https://www.googleapis.com/oauth2/v3/userinfo";
+      var res = UrlFetchApp.fetch(verifyUrl, {
+        headers: { "Authorization": "Bearer " + token },
+        muteHttpExceptions: true
+      });
+      
+      if (res.getResponseCode() !== 200) {
+        return ContentService.createTextOutput(JSON.stringify({ error: "Invalid authentication session" }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      
+      var profile = JSON.parse(res.getContentText());
+      var email = profile.email;
+      
+      if (email !== "iniansarathi2003@gmail.com") {
+        return ContentService.createTextOutput(JSON.stringify({ error: "Access Denied: Unauthorized admin profile" }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      
+      var notificationsSheet = ss.getSheetByName("Notifications") || ss.insertSheet("Notifications");
+      if (notificationsSheet.getLastRow() === 0) {
+        notificationsSheet.appendRow(["Email", "Message", "Status", "Timestamp"]);
+      }
+      
+      notificationsSheet.appendRow([targetEmail, message, "Unread", new Date().toISOString()]);
+      JSON_RESPONSE = { success: true };
+      
+    } else if (action === "markNotificationRead") {
+      var email = data.email;
+      var timestamp = data.timestamp;
+      
+      var notificationsSheet = ss.getSheetByName("Notifications") || ss.insertSheet("Notifications");
+      if (notificationsSheet) {
+        var notifRows = notificationsSheet.getDataRange().getValues();
+        for (var i = 1; i < notifRows.length; i++) {
+          if (notifRows[i][0] === email && notifRows[i][3] === timestamp) {
+            notificationsSheet.getRange(i + 1, 3).setValue("Read");
+          }
+        }
+      }
       JSON_RESPONSE = { success: true };
     }
     
